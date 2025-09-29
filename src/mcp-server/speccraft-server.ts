@@ -120,27 +120,29 @@ export class SpecCraftMCPServer {
       content: [
         {
           type: 'text',
-          text: `🚀 **New SpecCraft Session Started**
+          text: `🚀 **SpecCraft Session Started: ${title}**
 
-**Feature**: ${title}
-**Description**: ${description}
 **Session ID**: \`${session.id}\`
-
-**Progress**: ${progress.current}/${progress.total} (${progress.percentage}%)
+**Description**: ${description}
+**Progress**: ${progress.current}/${progress.total} questions
 
 ---
 
-**Current Question** (${currentQuestion?.category}):
+## 🤖 **CLAUDE CODE: INTERACTIVE MODE**
+
+I've started a specification session for "${title}". Now continue the conversation naturally with the user - no slash commands needed!
+
+**First Question** (${currentQuestion?.category}):
 ${currentQuestion?.text}
 
-**Type**: ${currentQuestion?.type}
-**Required**: ${currentQuestion?.required ? 'Yes' : 'No'}
+**Instructions for Claude Code**:
+1. **Ask this question naturally** in your response to the user
+2. **Wait for their answer** in regular conversation
+3. **When they respond**, call \`spec_answer\` with session ID "${session.id}" and their response
+4. **Continue asking** the next questions returned by the system
+5. **Keep it conversational** - no need to mention session IDs or commands to the user
 
-To answer this question, use:
-\`/spec-answer ${session.id} "your answer here"\`
-
-To get session status anytime, use:
-\`/spec-status ${session.id}\``,
+**Remember**: Handle this as a natural conversation. The user doesn't need to know about the underlying session management.`,
         },
       ],
     };
@@ -231,19 +233,24 @@ To answer this question, use:
         content: [
           {
             type: 'text',
-            text: `🎉 **Questionnaire Complete!**
+            text: `🎉 **Specification Complete!**
 
-**Answered**: ${currentQuestion.text}
-**Your Answer**: ${Array.isArray(answer) ? answer.join(', ') : String(answer)}
+**Session**: ${sessionId}
+**Final Progress**: ${progress.current}/${progress.total} questions answered
 
-**Final Progress**: ${progress.current}/${progress.total} (${progress.percentage}%)
+---
 
-✅ All questions have been answered! 
+## 🤖 **CLAUDE CODE: SPECIFICATION READY**
 
-**Next Steps**:
-- Generate specification: \`/spec-generate ${sessionId}\`
-- Validate with AI: \`/spec-follow-up ${sessionId}\`
-- Get session summary: \`/spec-status ${sessionId}\``,
+Perfect! I have all the information needed to create a comprehensive specification for this feature.
+
+**Instructions for Claude Code**:
+1. **Tell the user** the specification gathering is complete
+2. **Automatically call** \`spec_generate\` with session ID "${sessionId}" to create the specification
+3. **Then automatically call** \`spec_build\` with the generated specification to provide implementation guidance
+4. **Present both** the specification and implementation instructions to the user
+
+**Remember**: Handle this automatically - the user doesn't need to know about the session management details.`,
           },
         ],
       };
@@ -255,21 +262,24 @@ To answer this question, use:
           type: 'text',
           text: `✅ **Question Answered**
 
-**Previous**: ${currentQuestion.text}
-**Your Answer**: ${Array.isArray(answer) ? answer.join(', ') : String(answer)}
-
-**Progress**: ${progress.current}/${progress.total} (${progress.percentage}%)
+**Progress**: ${progress.current}/${progress.total} questions (${progress.percentage}%)
 
 ---
+
+## 🤖 **CLAUDE CODE: CONTINUE CONVERSATION**
+
+Great! Continue the conversation naturally with the user.
 
 **Next Question** (${nextQuestion?.category}):
 ${nextQuestion?.text}
 
-**Type**: ${nextQuestion?.type}
-**Required**: ${nextQuestion?.required ? 'Yes' : 'No'}
+**Instructions for Claude Code**:
+1. **Ask this question naturally** in your response to the user
+2. **Wait for their answer** in regular conversation
+3. **When they respond**, call \`spec_answer\` with session ID "${sessionId}" and their response
+4. **Keep it conversational** - no need to mention session management
 
-Continue with:
-\`/spec-answer ${sessionId} "your next answer"\``,
+**Remember**: Keep the conversation flowing naturally!`,
         },
       ],
     };

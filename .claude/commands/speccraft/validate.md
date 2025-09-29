@@ -1,91 +1,127 @@
 ---
-description: Validate specification quality with AI analysis
+description: Validate specification completeness and quality using AI analysis
 mcp_server: "speccraft"
 args:
   - name: file_path
-    description: Path to the markdown specification file
+    description: Path to specification markdown file
     required: true
   - name: session_id
     description: Optional session ID for additional context
     required: false
 ---
 
-# Validate Specification Quality
+# Validate Specification
 
-Use AI-powered analysis to assess the completeness and quality of your specification document.
+Analyzes a specification document using AI to provide comprehensive feedback on completeness, quality, and implementation readiness.
 
 ## Usage
 
 ```
-/speccraft:validate <file-path> [session-id]
+/speccraft:validate ./specs/my-specification.md
 ```
 
-## Examples
+## With Session Context
 
 ```
-/speccraft:validate "user-auth-spec.md"
+/speccraft:validate ./specs/my-specification.md session-id-123
 ```
 
+## What It Validates
+
+### 📋 **Completeness Analysis**
+- All required sections present
+- Sufficient detail for implementation
+- Clear acceptance criteria
+- Missing requirements identification
+
+### 🎯 **Clarity Assessment**
+- Requirement clarity and specificity
+- Potential ambiguities
+- Implementation guidance quality
+
+### ⚙️ **Technical Feasibility**
+- Technical complexity assessment
+- Resource requirement estimates
+- Potential implementation challenges
+- Technology stack recommendations
+
+### 🔗 **Integration Considerations**
+- Dependencies and relationships
+- Data flow validation
+- API design completeness
+- Security requirement coverage
+
+### 📏 **Quality Metrics**
+- Specification completeness score
+- Implementation readiness rating
+- Risk assessment
+- Effort estimation
+
+## Output Format
+
+The validation provides:
+- **Overall Quality Score** (1-100)
+- **Detailed Analysis** by category
+- **Specific Recommendations** for improvement
+- **Missing Elements** that should be added
+- **Implementation Risks** to consider
+- **Next Steps** for specification refinement
+
+## Example Output
+
 ```
-/speccraft:validate "features/payment-processing.md" session_123
+📊 Specification Validation Report
+
+Overall Quality: 85/100 ✅ Good
+
+Strengths:
+✅ Clear user workflows defined
+✅ Comprehensive data model
+✅ Security requirements specified
+
+Areas for Improvement:
+⚠️  Performance requirements need more detail
+⚠️  Error handling scenarios incomplete
+⚠️  Testing strategy could be expanded
+
+Recommendations:
+1. Add specific performance metrics (response times, throughput)
+2. Define error handling for edge cases
+3. Include integration testing approach
 ```
 
-## Analysis Dimensions
+## When to Use
 
-### Completeness Assessment
-- **Functional Coverage**: Are all core features specified?
-- **Technical Requirements**: Performance, security, and architecture details
-- **UI/UX Specifications**: User interface and experience requirements
-- **Edge Cases**: Error handling and validation scenarios
+### 📝 **Before Implementation**
+- Ensure specification is complete before development starts
+- Identify potential issues early
+- Get confidence in implementation readiness
 
-### Quality Metrics
-- **Clarity Score**: How understandable is the specification?
-- **Specificity Level**: How actionable are the requirements?
-- **Implementation Readiness**: How ready is this for development?
-- **Best Practices**: Compliance with industry standards
+### 🔄 **During Review Process**
+- Team review preparation
+- Stakeholder presentation readiness
+- Quality assurance checkpoint
 
-## AI-Powered Insights
+### 📈 **Continuous Improvement**
+- Learn what makes quality specifications
+- Improve specification writing skills
+- Build better requirements over time
 
-The validation uses advanced LLM analysis to:
-- **Identify Gaps**: Missing sections or incomplete requirements
-- **Suggest Improvements**: Specific areas that need enhancement
-- **Quality Scoring**: Objective assessment of specification quality
-- **Actionable Feedback**: Clear recommendations for improvement
+## Benefits
 
-## Validation Report
+### 🎯 **Reduce Implementation Risks**
+- Catch missing requirements early
+- Identify technical challenges upfront
+- Ensure all stakeholders have same understanding
 
-Results include:
-- **Overall Score**: Percentage-based quality assessment
-- **Status Classification**: Complete ✅ or Needs Improvement ⚠️
-- **Critical Issues**: Must-address gaps before development
-- **Enhancement Suggestions**: Optional improvements for better quality
+### ⚡ **Faster Development**
+- Clear, complete specifications lead to faster coding
+- Fewer questions and clarifications during development
+- Reduced back-and-forth between teams
 
-## When to Validate
+### 📊 **Quality Assurance**
+- Objective quality assessment
+- Consistent evaluation criteria
+- Measurable improvement tracking
 
-### Optimal Timing
-- **Before Development**: Ensure specifications are development-ready
-- **During Reviews**: Get objective quality assessment for team discussions
-- **After Updates**: Re-validate when specifications change
-- **Quality Gates**: Use as part of your development process
-
-### Continuous Improvement
-- **Iterative Enhancement**: Multiple validation rounds to improve quality
-- **Team Standards**: Maintain consistent specification quality across projects
-- **Learning Tool**: Understand what makes a good specification
-
-## Integration with Sessions
-
-When providing a session ID:
-- **Context Awareness**: Uses original questionnaire responses for deeper analysis
-- **Consistency Check**: Compares generated spec with your answers
-- **Gap Identification**: Finds discrepancies or missing information
-
-## Next Steps
-
-Based on validation results:
-- **If Complete**: Proceed with confidence to development
-- **If Incomplete**: Address critical gaps and missing areas
-- **If Unclear**: Refine language and add specificity
-- **Re-validate**: Run validation again after improvements
-
-The goal is a specification that developers can implement without ambiguity or missing requirements.
+Perfect for ensuring your specifications are implementation-ready! 🎯

@@ -11,6 +11,16 @@ args:
 
 Get comprehensive help, documentation, and examples for implementing features with Keystone.js. This command provides real-time access to patterns, field types, and implementation guidance.
 
+## 🚀 **Simplified SpecCraft Commands**
+
+SpecCraft now uses just **4 essential commands**:
+
+### Primary Commands
+- **`/speccraft:new`** - Start interactive specification (handles entire conversation)
+- **`/speccraft:build`** - Build from specification (provides implementation guidance)
+- **`/speccraft:validate`** - Validate specification quality
+- **`/speccraft:help`** - Get documentation and help
+
 ## Usage
 
 ```
