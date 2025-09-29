@@ -36,7 +36,7 @@
     "build": "tsc --build src/mcp-server/tsconfig.json",
     "prepublishOnly": "pnpm run build",
     "release": "pnpm run build && pnpm changeset publish",
-    "postinstall": "pnpm run build && node bin/postinstall.js",
+    "postinstall": "node bin/postinstall.js",
     "test": "vitest run",
     "dev": "tsx src/mcp-server/index.ts",
     "lint": "eslint src/mcp-server src/lib/specification-engine --ext .ts",
