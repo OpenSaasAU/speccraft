@@ -1,27 +1,50 @@
 {
-  "name": "speccraft",
-  "version": "0.1.0",
-  "private": true,
+  "name": "@opensaas/speccraft",
+  "version": "1.0.0",
+  "private": false,
+  "description": "AI-powered specification creation for Claude Code via MCP server and slash commands. Initialize projects with 'npx @opensaas/speccraft init <project-name>'",
+  "keywords": ["claude-code", "mcp", "specification", "ai", "questionnaire", "documentation"],
+  "author": "SpecCraft",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/opensaas/speccraft.git"
+  },
+  "bugs": {
+    "url": "https://github.com/opensaas/speccraft/issues"
+  },
+  "homepage": "https://github.com/opensaas/speccraft#readme",
+  "main": "dist/mcp-server/mcp-server/index.js",
+  "bin": {
+    "speccraft": "bin/speccraft.js"
+  },
+  "files": [
+    "dist/",
+    "bin/",
+    ".claude/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
-    "lint": "eslint"
+    "build": "tsc --build src/mcp-server/tsconfig.json",
+    "prepublishOnly": "npm run build",
+    "postinstall": "node bin/postinstall.js",
+    "test": "vitest run",
+    "dev": "tsx src/mcp-server/index.ts",
+    "lint": "eslint src/mcp-server src/lib/specification-engine --ext .ts",
+    "format": "prettier --write ."
   },
   "dependencies": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "next": "15.5.4"
+    "@modelcontextprotocol/sdk": "^1.18.2",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "@types/node": "^20.19.17",
     "eslint": "^9",
-    "eslint-config-next": "15.5.4",
-    "@eslint/eslintrc": "^3"
-  }
+    "prettier": "^3.6.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
+  },
+  "packageManager": "pnpm@9.15.9+sha512.68046141893c66fad01c079231128e9afb89ef87e2691d69e4d40eee228988295fd4682181bae55b58418c3a253bde65a505ec7c5f9403ece5cc3cd37dcf2531"
 }

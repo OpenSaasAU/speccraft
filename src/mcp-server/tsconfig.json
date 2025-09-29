@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "outDir": "../../dist/mcp-server",
+    "rootDir": "..",
+    "noEmit": false,
+    "declaration": false
+  },
+  "include": ["./**/*.ts", "../lib/specification-engine/**/*.ts"],
+  "exclude": ["**/*.test.ts", "**/__tests__/**", "../lib/specification-engine/__tests__/**"]
+}

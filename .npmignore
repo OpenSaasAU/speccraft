@@ -1,0 +1,37 @@
+# Source files - these will be built
+src/
+
+# Development files
+*.log
+node_modules/
+.git/
+.gitignore
+
+# Development configs
+eslint.config.mjs
+tsconfig.json
+
+# Test files
+**/*.test.*
+**/__tests__/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts that aren't needed
+.claude.json
+
+# Keep only these important files:
+# - dist/ (built MCP server)
+# - .claude/ (slash commands)
+# - bin/ (CLI scripts)
+# - README.md
+# - LICENSE
+# - package.json
