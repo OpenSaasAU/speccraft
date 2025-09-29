@@ -21,6 +21,7 @@ Usage:
 Commands:
   init <name>     Create new project with SpecCraft slash commands
   install         Add SpecCraft to Claude Code
+  update          Update SpecCraft MCP server and slash commands
   uninstall       Remove SpecCraft from Claude Code
   start           Start the MCP server directly
   help            Show this help message
@@ -28,6 +29,7 @@ Commands:
 Examples:
   npx @opensaas/speccraft init my-project
   npx @opensaas/speccraft install
+  npx @opensaas/speccraft update
   npx @opensaas/speccraft start
 
 After installation, use these commands in Claude Code:
@@ -47,7 +49,17 @@ function getServerPath() {
 function getCommandsPath() {
   // Path to the slash commands in the package
   const packageDir = path.dirname(require.resolve("../package.json"));
-  return path.join(packageDir, ".claude/commands");
+  const commandsPath = path.join(packageDir, ".claude/commands");
+  
+  // If not found in package (during development), try relative to this script
+  if (!fs.existsSync(commandsPath)) {
+    const devCommandsPath = path.join(__dirname, "../.claude/commands");
+    if (fs.existsSync(devCommandsPath)) {
+      return devCommandsPath;
+    }
+  }
+  
+  return commandsPath;
 }
 
 async function promptForProjectName() {
@@ -284,6 +296,140 @@ function uninstall() {
   });
 }
 
+async function updateSpecCraft() {
+  console.log("🔄 Updating SpecCraft...");
+  
+  // Show current version
+  try {
+    const packageJson = require("../package.json");
+    console.log(`📦 Current version: ${packageJson.version}`);
+  } catch (error) {
+    console.log("📦 Version information unavailable");
+  }
+  console.log("");
+
+  // Check if current project has .claude directory
+  const claudeDir = path.resolve('.claude');
+  const hasLocalCommands = fs.existsSync(claudeDir);
+
+  if (hasLocalCommands) {
+    console.log("📁 Found local .claude directory - updating slash commands...");
+    
+    try {
+      // Backup existing commands
+      const backupDir = path.join(claudeDir, 'commands.backup.' + Date.now());
+      const commandsDir = path.join(claudeDir, 'commands');
+      
+      if (fs.existsSync(commandsDir)) {
+        await copyDirectory(commandsDir, backupDir);
+        console.log(`✅ Backed up existing commands to: ${path.basename(backupDir)}`);
+        
+        // Remove old commands
+        await fs.promises.rm(commandsDir, { recursive: true, force: true });
+      }
+
+      // Copy new commands
+      const sourceCommandsPath = getCommandsPath();
+      if (fs.existsSync(sourceCommandsPath)) {
+        await copyDirectory(sourceCommandsPath, commandsDir);
+        console.log("✅ Updated slash commands to latest version");
+      } else {
+        console.log("⚠️  Warning: Latest SpecCraft commands not found in package");
+      }
+
+      // Update permissions in settings if they exist
+      const settingsPath = path.join(claudeDir, 'settings.local.json');
+      if (fs.existsSync(settingsPath)) {
+        try {
+          const settings = JSON.parse(await fs.promises.readFile(settingsPath, 'utf8'));
+          
+          // Update with current permissions
+          const currentPermissions = [
+            "mcp__speccraft__spec_new",
+            "mcp__speccraft__spec_answer", 
+            "mcp__speccraft__spec_generate",
+            "mcp__speccraft__spec_validate",
+            "mcp__speccraft__spec_build",
+            "mcp__speccraft__spec_help",
+            "mcp__speccraft__spec_fetch_docs",
+            "mcp__speccraft__spec_fetch_example"
+          ];
+
+          settings.permissions = settings.permissions || {};
+          settings.permissions.allow = currentPermissions;
+          
+          await fs.promises.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+          console.log("✅ Updated permissions configuration");
+        } catch (error) {
+          console.log("⚠️  Could not update permissions:", error.message);
+        }
+      }
+
+    } catch (error) {
+      console.error(`❌ Failed to update local commands: ${error.message}`);
+    }
+  }
+
+  // Update the MCP server
+  console.log("🔄 Updating MCP server in Claude Code...");
+  
+  const serverPath = getServerPath();
+  if (!fs.existsSync(serverPath)) {
+    console.error("❌ Error: MCP server not found. Please run pnpm install first.");
+    process.exit(1);
+  }
+
+  // Remove existing MCP server
+  console.log("🗑️  Removing old MCP server...");
+  const removeChild = spawn("claude", ["mcp", "remove", "speccraft"], {
+    stdio: "pipe" // Capture output instead of inherit to avoid noise
+  });
+
+  removeChild.on("close", (removeCode) => {
+    // Re-add with new server path (don't check remove exit code as it may not exist)
+    console.log("➕ Adding updated MCP server...");
+    
+    const addCommand = [
+      "claude",
+      "mcp", 
+      "add",
+      "speccraft",
+      "--",
+      "node",
+      serverPath
+    ];
+
+    const addChild = spawn(addCommand[0], addCommand.slice(1), {
+      stdio: "inherit"
+    });
+
+    addChild.on("close", (addCode) => {
+      if (addCode === 0) {
+        console.log("");
+        console.log("✅ SpecCraft updated successfully!");
+        console.log("");
+        console.log("🔄 Changes in this update:");
+        console.log("  • Latest MCP server with bug fixes and improvements");
+        console.log("  • Updated slash commands (4 essential commands)");
+        console.log("  • Enhanced error handling and documentation");
+        console.log("  • Live Keystone.js documentation fetching");
+        console.log("");
+        console.log("📚 Available commands:");
+        console.log("  /speccraft:new          - Interactive specification creation");
+        console.log("  /speccraft:build        - Implementation guidance");  
+        console.log("  /speccraft:validate     - Quality assessment");
+        console.log("  /speccraft:help         - Live documentation lookup");
+        console.log("");
+        console.log("🚀 Ready to use! Try: /speccraft:new \"My Feature\" \"Feature description\"");
+      } else {
+        console.error("❌ Failed to add updated MCP server.");
+        console.error("Try running 'npx @opensaas/speccraft install' manually.");
+        process.exit(1);
+      }
+    });
+  });
+}
+
 function startServer() {
   const serverPath = getServerPath();
 
@@ -308,6 +454,9 @@ switch (command) {
     break;
   case "install":
     install();
+    break;
+  case "update":
+    updateSpecCraft();
     break;
   case "uninstall":
     uninstall();
