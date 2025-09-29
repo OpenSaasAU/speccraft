@@ -1,9 +1,16 @@
 {
   "name": "@opensaas/speccraft",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "private": false,
   "description": "AI-powered specification creation for Claude Code via MCP server and slash commands. Initialize projects with 'npx @opensaas/speccraft init <project-name>'",
-  "keywords": ["claude-code", "mcp", "specification", "ai", "questionnaire", "documentation"],
+  "keywords": [
+    "claude-code",
+    "mcp",
+    "specification",
+    "ai",
+    "questionnaire",
+    "documentation"
+  ],
   "author": "SpecCraft",
   "license": "MIT",
   "repository": {
