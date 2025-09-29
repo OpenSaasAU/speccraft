@@ -32,8 +32,9 @@ Examples:
 
 After installation, use these commands in Claude Code:
   /speccraft:new "Feature Name" "Description"
-  /speccraft:list
-  /speccraft:continue <session-id>
+  /speccraft:build spec.md
+  /speccraft:validate spec.md
+  /speccraft:help text
 `);
 }
 
@@ -146,13 +147,13 @@ async function initProject() {
       permissions: {
         allow: [
           "mcp__speccraft__spec_new",
-          "mcp__speccraft__spec_continue",
           "mcp__speccraft__spec_answer", 
           "mcp__speccraft__spec_generate",
           "mcp__speccraft__spec_validate",
-          "mcp__speccraft__spec_status",
-          "mcp__speccraft__spec_list",
-          "mcp__speccraft__spec_follow_up"
+          "mcp__speccraft__spec_build",
+          "mcp__speccraft__spec_help",
+          "mcp__speccraft__spec_fetch_docs",
+          "mcp__speccraft__spec_fetch_example"
         ],
         deny: [],
         ask: []
@@ -176,14 +177,12 @@ A SpecCraft-enabled project for AI-powered specification creation.
 
 ## Available Commands
 
-- \`/speccraft:new\` - Start a new specification session
-- \`/speccraft:list\` - List all active sessions
-- \`/speccraft:continue\` - Continue an existing session
-- \`/speccraft:answer\` - Answer the current question
-- \`/speccraft:generate\` - Generate markdown specification
-- \`/speccraft:validate\` - Validate specification completeness
-- \`/speccraft:status\` - Get session status
-- \`/speccraft:follow-up\` - Generate AI follow-up questions
+SpecCraft uses just **4 essential commands**:
+
+- \`/speccraft:new\` - **Interactive specification** (handles entire conversation)
+- \`/speccraft:build\` - **Implementation guidance** from specification
+- \`/speccraft:validate\` - **Quality assessment** and recommendations
+- \`/speccraft:help\` - **Documentation & examples** (live Keystone.js docs)
 
 ## Specifications
 
@@ -221,7 +220,7 @@ function install() {
 
   if (!fs.existsSync(serverPath)) {
     console.error(
-      "❌ Error: MCP server not found. Please run npm install first.",
+      "❌ Error: MCP server not found. Please run pnpm install first.",
     );
     process.exit(1);
   }
@@ -254,14 +253,11 @@ function install() {
       console.log("🎯 Quick start:");
       console.log('  /speccraft:new "Test Feature" "A simple test feature"');
       console.log("");
-      console.log("📚 All commands:");
-      console.log("  /speccraft:list         - List active sessions");
-      console.log("  /speccraft:continue     - Resume a session");
-      console.log("  /speccraft:answer       - Answer current question");
-      console.log("  /speccraft:generate     - Create specification");
-      console.log("  /speccraft:validate     - Validate quality");
-      console.log("  /speccraft:status       - Check progress");
-      console.log("  /speccraft:follow-up    - AI enhancement");
+      console.log("📚 Essential commands (4 total):");
+      console.log("  /speccraft:new          - Interactive specification (full conversation)");
+      console.log("  /speccraft:build        - Implementation guidance");
+      console.log("  /speccraft:validate     - Quality assessment");
+      console.log("  /speccraft:help         - Live documentation & examples");
     } else {
       console.error(
         "❌ Installation failed. Make sure Claude Code is installed.",
