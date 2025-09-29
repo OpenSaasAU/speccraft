@@ -23,9 +23,9 @@ if (fs.existsSync(serverPath)) {
   console.log('');
   console.log('📚 Available commands after installation:');
   console.log('  /speccraft:new "Feature Name" "Description"');
-  console.log('  /speccraft:list');
-  console.log('  /speccraft:continue <session-id>');
-  console.log('  /speccraft:generate <session-id>');
+  console.log('  /speccraft:build <spec-path>');
+  console.log('  /speccraft:validate <spec-path>');
+  console.log('  /speccraft:help <topic>');
 } else {
   console.error('❌ Error: MCP server not found in package');
   console.error('Expected at:', serverPath);
