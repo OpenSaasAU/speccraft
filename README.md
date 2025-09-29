@@ -1,6 +1,6 @@
 # SpecCraft
 
-AI-powered specification platform that guides users through creating comprehensive feature specifications using LLM-driven questionnaires. Built as Claude Code slash commands powered by Model Context Protocol (MCP).
+AI-powered specification platform that creates comprehensive feature specifications through natural conversations with Claude Code. Built as interactive slash commands powered by Model Context Protocol (MCP) with live Keystone.js documentation fetching.
 
 ## Quick Setup
 
@@ -22,49 +22,117 @@ claude mcp add speccraft -- node /path/to/server
 
 ## Features
 
-- **8 Claude Code slash commands** (`/speccraft:new`, `/speccraft:continue`, etc.)
-- **AI-guided questionnaires** with 20+ comprehensive questions
-- **Claude-powered analysis** - Uses Claude directly for smart insights and validation
-- **Professional markdown generation** ready for development
-- **Zero external API calls** - All AI processing happens within Claude Code
-- **Session management** with persistent storage
-- **Lightweight package** - Minimal dependencies, maximum efficiency
+- **🎯 Interactive Conversations** - Natural Q&A flow with Claude Code (no complex slash commands)
+- **📚 Live Documentation** - Real-time Keystone.js docs and examples from GitHub
+- **🤖 AI-Guided Questionnaires** - Intelligent follow-up questions based on your responses
+- **⚡ Automatic Implementation** - Goes from specification directly to implementation guidance
+- **🔒 Zero External APIs** - All AI processing within Claude Code, documentation from GitHub
+- **📝 Professional Output** - Development-ready specifications and implementation instructions
 
 ## Available Commands
 
+SpecCraft uses just **4 essential commands**:
+
 | Command | Purpose | Example |
 |---------|---------|---------|
-| `/speccraft:new` | Start new specification | `/speccraft:new "User Auth" "Login system"` |
-| `/speccraft:continue` | Resume session | `/speccraft:continue session_123` |
-| `/speccraft:answer` | Answer question | `/speccraft:answer session_123 "Email and password"` |
-| `/speccraft:generate` | Create specification | `/speccraft:generate session_123` |
-| `/speccraft:validate` | Validate quality | `/speccraft:validate spec.md` |
-| `/speccraft:status` | Check progress | `/speccraft:status session_123` |
-| `/speccraft:list` | List sessions | `/speccraft:list` |
-| `/speccraft:follow-up` | AI enhancement | `/speccraft:follow-up session_123` |
+| `/speccraft:new` | **Interactive specification** | `/speccraft:new "User Auth" "Login system"` |
+| `/speccraft:build` | **Implementation guidance** | `/speccraft:build spec.md` |
+| `/speccraft:validate` | **Quality assessment** | `/speccraft:validate spec.md` |
+| `/speccraft:help` | **Documentation & help** | `/speccraft:help text` |
 
-## Workflow Example
+## Interactive Workflow
 
-1. **Start**: `/speccraft:new "Shopping Cart" "Add items to cart and checkout"`
-2. **Answer**: `/speccraft:answer session_123 "Users can add products, modify quantities..."`
-3. **Enhance**: `/speccraft:follow-up session_123` (AI suggests additional questions)
-4. **Generate**: `/speccraft:generate session_123` (creates `shopping-cart-spec.md`)
-5. **Validate**: `/speccraft:validate shopping-cart-spec.md` (AI quality assessment)
+### 🚀 **New Simplified Experience**
+
+```bash
+# Start specification
+/speccraft:new "Product Reviews" "Allow customers to rate products"
+
+# Claude Code automatically handles the conversation:
+# ✅ Asks questions naturally in chat
+# ✅ Records your answers automatically  
+# ✅ Generates specification when complete
+# ✅ Provides implementation guidance immediately
+
+# Validate quality (optional)
+/speccraft:validate product-reviews-spec.md
+
+# Get implementation help
+/speccraft:help relationship  # Live Keystone.js docs
+```
+
+### **Sample Conversation Flow**
+
+```
+User: /speccraft:new "Product Reviews" "Allow customers to rate products"
+
+Claude Code: I'll help you create a comprehensive specification for your Product Reviews feature. 
+
+What's the primary business goal? Are you looking to:
+- Increase customer engagement and trust?
+- Improve product discoverability? 
+- Gather feedback for improvement?
+
+User: We want to increase customer trust and help purchasing decisions.
+
+Claude Code: Perfect! Now about the user experience - should customers be able to:
+- Rate products with stars (1-5)?
+- Write detailed text reviews?
+- Upload photos with reviews?
+- Rate specific aspects (quality, value, etc.)?
+
+User: Yes to stars and text, no photos needed, just overall rating.
+
+Claude Code: Great! Let me ask about the data requirements...
+
+[Conversation continues naturally until complete]
+
+Claude Code: Excellent! I have everything needed. Let me generate your specification and implementation guidance.
+
+📋 **Specification Generated**: product-reviews-spec.md
+🚀 **Implementation Ready**: Here's how to build it with Keystone.js...
+```
+
+## Live Documentation Integration
+
+SpecCraft fetches **real-time documentation** from official sources:
+
+```bash
+# Get current Keystone.js field documentation
+/speccraft:help text           # Text field options and examples
+/speccraft:help relationship   # Relationship field patterns
+/speccraft:help access-control # Security patterns
+
+# Fetch official examples  
+/speccraft:help blog           # Complete blog example
+/speccraft:help auth           # Authentication patterns
+```
+
+**Documentation Sources:**
+- 📚 **Field Types**: `https://github.com/keystonejs/keystone/tree/main/docs/content/docs/fields`
+- 🔧 **Guides**: `https://github.com/keystonejs/keystone/tree/main/docs/content/docs/guides`  
+- 💡 **Examples**: `https://github.com/keystonejs/keystone/tree/main/examples`
 
 ## Architecture
 
-- **Slash Commands** (`.claude/commands/speccraft/`) - Claude Code interface
-- **MCP Server** (`src/mcp-server/`) - Command processing and session management
-- **Specification Engine** (`src/lib/specification-engine/`) - Core questionnaire logic
-- **Claude Integration** - Direct AI analysis within Claude Code (no external APIs)
-- **Session Storage** (`.speccraft/sessions.json`) - Persistent session data
+### **Core Components**
+- **Interactive Commands** (`.claude/commands/speccraft/`) - 4 essential Claude Code slash commands
+- **MCP Server** (`src/mcp-server/`) - Session management and documentation fetching
+- **Specification Engine** (`src/lib/specification-engine/`) - Intelligent questionnaire logic
+- **Documentation Provider** (`src/lib/guidance/`) - Live GitHub documentation fetching
+- **Session Storage** (`.speccraft/sessions.json`) - Conversation persistence
 
-### Key Architectural Benefits
+### **Key Improvements in v2**
+- **🎯 85% Fewer Commands** - From 11 commands to 4 essential ones
+- **💬 Natural Conversations** - No more complex session management for users
+- **📚 Live Documentation** - Real-time Keystone.js docs replace hardcoded content
+- **⚡ Automated Flow** - From conversation → specification → implementation seamlessly
 
-- **🚀 Fast & Reliable** - No external API dependencies or network calls
-- **🔒 Secure** - All processing happens locally within Claude Code
+### **Architectural Benefits**
+- **🚀 Fast & Reliable** - Live documentation with smart caching
+- **🔒 Secure** - Local processing + official documentation sources
 - **💰 Cost-effective** - No additional AI API costs
-- **🎯 Smart** - Leverages Claude's full context and reasoning capabilities
+- **🎯 Always Current** - Real-time docs ensure latest best practices
 
 ## Development
 
@@ -88,10 +156,27 @@ npx @opensaas/speccraft uninstall
 
 ```bash
 # Build for publishing
-npm run build
+pnpm run build
 
 # Publish to npm (maintainers only)
-npm publish
+pnpm publish
 ```
 
-*SpecCraft transforms the way you create specifications - from ad-hoc documentation to comprehensive, AI-enhanced requirements that guide successful development.*
+## What's New in v2
+
+### **Simplified Experience**
+- **Single Command Workflow**: `/speccraft:new` handles entire specification process
+- **Natural Conversations**: No more `/speccraft:answer` or `/speccraft:continue` commands
+- **Automated Progression**: Automatic specification generation and implementation guidance
+
+### **Live Documentation**
+- **Real-time Fetching**: Current Keystone.js documentation from GitHub
+- **Smart Caching**: Efficient documentation retrieval with local caching
+- **Official Examples**: Direct access to Keystone.js example projects
+
+### **Enhanced Claude Code Integration**
+- **Conversational Flow**: Claude Code manages entire specification process naturally
+- **Contextual Guidance**: Real-time implementation instructions with live documentation
+- **Seamless Workflow**: From idea to specification to implementation in one conversation
+
+*SpecCraft v2 revolutionizes feature specification - from complex command workflows to natural conversations that deliver comprehensive, implementation-ready specifications with live documentation support.*
