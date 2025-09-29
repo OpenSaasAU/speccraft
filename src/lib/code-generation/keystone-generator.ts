@@ -33,16 +33,51 @@ export class KeystoneProjectGenerator {
   }
 
   private async cloneStarterTemplate(projectPath: string): Promise<void> {
+    const fs = await import('fs/promises');
+    const os = await import('os');
+    
+    // If projectPath is current directory ".", we need special handling
+    if (projectPath === '.' || path.resolve(projectPath) === process.cwd()) {
+      // Clone to a temporary directory first
+      const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'speccraft-'));
+      const tempProjectPath = path.join(tempDir, 'starter');
+      
+      try {
+        // Clone to temp directory
+        await this.cloneToDirectory(tempProjectPath);
+        
+        // Copy contents to current directory
+        await this.copyDirectoryContents(tempProjectPath, '.');
+        
+        // Clean up temp directory
+        await fs.rm(tempDir, { recursive: true, force: true });
+      } catch (error) {
+        // Clean up temp directory on error
+        await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+        throw error;
+      }
+    } else {
+      // Normal clone to specified directory
+      await this.cloneToDirectory(projectPath);
+    }
+  }
+
+  private async cloneToDirectory(targetPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const git = spawn('git', ['clone', this.starterRepoUrl, projectPath], {
+      const git = spawn('git', ['clone', this.starterRepoUrl, targetPath], {
         stdio: 'pipe'
+      });
+
+      let stderr = '';
+      git.stderr?.on('data', (data) => {
+        stderr += data.toString();
       });
 
       git.on('close', (code) => {
         if (code === 0) {
           resolve();
         } else {
-          reject(new Error(`Git clone failed with code ${code}`));
+          reject(new Error(`Git clone failed with code ${code}. Error: ${stderr}`));
         }
       });
 
@@ -50,6 +85,29 @@ export class KeystoneProjectGenerator {
         reject(new Error(`Git clone error: ${error.message}`));
       });
     });
+  }
+
+  private async copyDirectoryContents(sourceDir: string, targetDir: string): Promise<void> {
+    const fs = await import('fs/promises');
+    
+    const entries = await fs.readdir(sourceDir, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      // Skip .git directory when copying
+      if (entry.name === '.git') {
+        continue;
+      }
+      
+      const sourcePath = path.join(sourceDir, entry.name);
+      const targetPath = path.join(targetDir, entry.name);
+      
+      if (entry.isDirectory()) {
+        await fs.mkdir(targetPath, { recursive: true });
+        await this.copyDirectoryContents(sourcePath, targetPath);
+      } else {
+        await fs.copyFile(sourcePath, targetPath);
+      }
+    }
   }
 
   private async customizeProject(projectPath: string, spec: ParsedSpecification): Promise<void> {
@@ -249,7 +307,7 @@ ${spec.implementation.testing.map(test => `- ${test}`).join('\n')}
 5. Follow the deployment guidelines when ready
 
 **Specification Reference:**
-See \`docs/specs/feature-specification.md\` for the complete specification.
+See the original specification file for the complete specification.
 `;
 
     const notesPath = path.join(projectPath, 'docs', 'IMPLEMENTATION.md');

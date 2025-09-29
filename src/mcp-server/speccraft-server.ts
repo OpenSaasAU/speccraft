@@ -1,31 +1,22 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { 
-  QuestionnaireEngine, 
-  MarkdownGenerator, 
+import fs from "fs/promises";
+import path from "path";
+import {
+  QuestionnaireEngine,
   LLMQuestioner,
   createNewQuestionnaire,
   createSpecificationFromSession,
   type QuestionnaireSession,
-  type GeneratedQuestion,
-  type CompletenessAnalysis,
-} from '../lib/specification-engine/index.js';
+} from "../lib/specification-engine/index.js";
 import {
   SpecificationReader,
   KeystoneProjectGenerator,
-  FeatureGenerator,
   type ParsedSpecification,
-  type KeystoneProjectConfig,
-  type FeatureGenerationConfig,
-} from '../lib/code-generation/index.js';
+} from "../lib/code-generation/index.js";
 import {
   KeystoneGuidanceProvider,
   type KeystoneGuidance,
-} from '../lib/guidance/keystone-guidance.js';
-import {
-  KeystoneDocumentationProvider,
-  type DocumentationLookup,
-} from '../lib/guidance/documentation-provider.js';
+} from "../lib/guidance/keystone-guidance.js";
+import { KeystoneDocumentationProvider } from "../lib/guidance/documentation-provider.js";
 
 interface SessionStorage {
   [sessionId: string]: QuestionnaireSession;
@@ -43,13 +34,13 @@ export class SpecCraftMCPServer {
     this.llmQuestioner = new LLMQuestioner({
       maxFollowUpQuestions: 3,
     });
-    
+
     // Initialize guidance providers
     this.guidanceProvider = new KeystoneGuidanceProvider();
     this.docProvider = new KeystoneDocumentationProvider();
-    
+
     // Storage directory for persistence
-    this.storageDir = path.join(process.cwd(), '.speccraft');
+    this.storageDir = path.join(process.cwd(), ".speccraft");
     this.initializeStorage();
   }
 
@@ -58,23 +49,23 @@ export class SpecCraftMCPServer {
       await fs.mkdir(this.storageDir, { recursive: true });
       await this.loadSessions();
     } catch (error) {
-      console.error('Failed to initialize storage:', error);
+      console.error("Failed to initialize storage:", error);
     }
   }
 
   private async saveSessions() {
     try {
-      const sessionsFile = path.join(this.storageDir, 'sessions.json');
+      const sessionsFile = path.join(this.storageDir, "sessions.json");
       await fs.writeFile(sessionsFile, JSON.stringify(this.sessions, null, 2));
     } catch (error) {
-      console.error('Failed to save sessions:', error);
+      console.error("Failed to save sessions:", error);
     }
   }
 
   private async loadSessions() {
     try {
-      const sessionsFile = path.join(this.storageDir, 'sessions.json');
-      const data = await fs.readFile(sessionsFile, 'utf-8');
+      const sessionsFile = path.join(this.storageDir, "sessions.json");
+      const data = await fs.readFile(sessionsFile, "utf-8");
       this.sessions = JSON.parse(data);
     } catch (error) {
       // File doesn't exist or is invalid, start with empty sessions
@@ -83,32 +74,39 @@ export class SpecCraftMCPServer {
   }
 
   private async getNextSpecNumber(): Promise<string> {
-    const specsDir = path.join(process.cwd(), 'specs');
-    
+    const specsDir = path.join(process.cwd(), "specs");
+
     try {
       await fs.mkdir(specsDir, { recursive: true });
       const entries = await fs.readdir(specsDir, { withFileTypes: true });
-      
+
       // Find existing numbered directories
       const existingNumbers = entries
-        .filter(entry => entry.isDirectory())
-        .map(entry => entry.name)
-        .filter(name => /^\d{3}_/.test(name))
-        .map(name => parseInt(name.substring(0, 3), 10))
-        .filter(num => !isNaN(num));
-      
-      const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      return String(nextNumber).padStart(3, '0');
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .filter((name) => /^\d{3}_/.test(name))
+        .map((name) => parseInt(name.substring(0, 3), 10))
+        .filter((num) => !isNaN(num));
+
+      const nextNumber =
+        existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+      return String(nextNumber).padStart(3, "0");
     } catch (error) {
-      console.error('Failed to determine next spec number:', error);
-      return '001';
+      console.error("Failed to determine next spec number:", error);
+      return "001";
     }
   }
 
-  async createNewSpecification({ title, description }: { title: string; description: string }) {
+  async createNewSpecification({
+    title,
+    description,
+  }: {
+    title: string;
+    description: string;
+  }) {
     const engine = createNewQuestionnaire(title, description);
     const session = engine.getSession();
-    
+
     // Store session
     this.sessions[session.id] = session;
     await this.saveSessions();
@@ -119,7 +117,7 @@ export class SpecCraftMCPServer {
     return {
       content: [
         {
-          type: 'text',
+          type: "text",
           text: `🚀 **SpecCraft Session Started: ${title}**
 
 **Session ID**: \`${session.id}\`
@@ -162,7 +160,7 @@ ${currentQuestion?.text}
       return {
         content: [
           {
-            type: 'text',
+            type: "text",
             text: `✅ **Session Complete!**
 
 **Feature**: ${session.featureTitle}
@@ -182,7 +180,7 @@ Or validate completeness with AI:
     return {
       content: [
         {
-          type: 'text',
+          type: "text",
           text: `📝 **Continuing SpecCraft Session**
 
 **Feature**: ${session.featureTitle}
@@ -195,7 +193,7 @@ Or validate completeness with AI:
 ${currentQuestion?.text}
 
 **Type**: ${currentQuestion?.type}
-**Required**: ${currentQuestion?.required ? 'Yes' : 'No'}
+**Required**: ${currentQuestion?.required ? "Yes" : "No"}
 
 To answer this question, use:
 \`/spec-answer ${sessionId} "your answer here"\``,
@@ -204,7 +202,13 @@ To answer this question, use:
     };
   }
 
-  async answerQuestion({ sessionId, answer }: { sessionId: string; answer: string | boolean | string[] }) {
+  async answerQuestion({
+    sessionId,
+    answer,
+  }: {
+    sessionId: string;
+    answer: string | boolean | string[];
+  }) {
     const session = this.sessions[sessionId];
     if (!session) {
       throw new Error(`Session ${sessionId} not found`);
@@ -212,14 +216,14 @@ To answer this question, use:
 
     const engine = QuestionnaireEngine.fromSession(session);
     const currentQuestion = engine.getCurrentQuestion();
-    
+
     if (!currentQuestion) {
-      throw new Error('No current question to answer');
+      throw new Error("No current question to answer");
     }
 
     // Answer the question
     engine.answerCurrentQuestion(answer);
-    
+
     // Update stored session
     this.sessions[sessionId] = engine.getSession();
     await this.saveSessions();
@@ -232,7 +236,7 @@ To answer this question, use:
       return {
         content: [
           {
-            type: 'text',
+            type: "text",
             text: `🎉 **Specification Complete!**
 
 **Session**: ${sessionId}
@@ -247,10 +251,11 @@ Perfect! I have all the information needed to create a comprehensive specificati
 **Instructions for Claude Code**:
 1. **Tell the user** the specification gathering is complete
 2. **Automatically call** \`spec_generate\` with session ID "${sessionId}" to create the specification
-3. **Then automatically call** \`spec_build\` with the generated specification to provide implementation guidance
-4. **Present both** the specification and implementation instructions to the user
+3. **Present the generated specification** to the user
+4. **Recommend validation** with \`/speccraft:validate <spec-path>\`
+5. **Then recommend build** with \`/speccraft:build <spec-path>\` once they're satisfied
 
-**Remember**: Handle this automatically - the user doesn't need to know about the session management details.`,
+**Remember**: Stop after generating the specification. Let the user validate and choose when to build.`,
           },
         ],
       };
@@ -259,7 +264,7 @@ Perfect! I have all the information needed to create a comprehensive specificati
     return {
       content: [
         {
-          type: 'text',
+          type: "text",
           text: `✅ **Question Answered**
 
 **Progress**: ${progress.current}/${progress.total} questions (${progress.percentage}%)
@@ -285,7 +290,7 @@ ${nextQuestion?.text}
     };
   }
 
-  async generateSpecification({ sessionId, outputPath }: { sessionId: string; outputPath?: string }) {
+  async generateSpecification({ sessionId }: { sessionId: string }) {
     const session = this.sessions[sessionId];
     if (!session) {
       throw new Error(`Session ${sessionId} not found`);
@@ -294,20 +299,22 @@ ${nextQuestion?.text}
     const engine = QuestionnaireEngine.fromSession(session);
     if (!engine.isComplete()) {
       const progress = engine.getProgress();
-      throw new Error(`Session is not complete (${progress.percentage}% done). Continue answering questions first.`);
+      throw new Error(
+        `Session is not complete (${progress.percentage}% done). Continue answering questions first.`,
+      );
     }
 
     const result = createSpecificationFromSession(session);
-    
+
     // Create numbered spec directory
     const specNumber = await this.getNextSpecNumber();
-    const featureName = session.featureTitle.toLowerCase().replace(/\s+/g, '_');
+    const featureName = session.featureTitle.toLowerCase().replace(/\s+/g, "_");
     const specDirName = `${specNumber}_${featureName}`;
-    const specDir = path.join(process.cwd(), 'specs', specDirName);
-    
+    const specDir = path.join(process.cwd(), "specs", specDirName);
+
     // Create directory
     await fs.mkdir(specDir, { recursive: true });
-    
+
     // Determine output path
     const specFileName = `${featureName}_spec.md`;
     const fullPath = path.join(specDir, specFileName);
@@ -318,7 +325,7 @@ ${nextQuestion?.text}
     return {
       content: [
         {
-          type: 'text',
+          type: "text",
           text: `📄 **Specification Generated!**
 
 **Feature**: ${session.featureTitle}
@@ -334,19 +341,27 @@ ${result.markdown.substring(0, 500)}...
 The complete specification has been saved to: \`./specs/${specDirName}/${specFileName}\`
 
 **Next Steps**:
-- Review the specification file
-- Validate with: \`/spec-validate ${specFileName}\`
-- Generate code: \`/code-from-spec ${specFileName}\``,
+1. **Review**: Check the specification file at \`./specs/${specDirName}/${specFileName}\`
+2. **Validate**: Use \`/speccraft:validate ./specs/${specDirName}/${specFileName}\` to check quality
+3. **Implement**: When ready, use \`/speccraft:build ./specs/${specDirName}/${specFileName}\` to start implementation
+
+**Validation helps ensure** your specification is complete before beginning development!`,
         },
       ],
     };
   }
 
-  async validateSpecification({ filePath, sessionId }: { filePath: string; sessionId?: string }) {
+  async validateSpecification({
+    filePath,
+    sessionId,
+  }: {
+    filePath: string;
+    sessionId?: string;
+  }) {
     try {
       // Read the specification file
-      const specContent = await fs.readFile(filePath, 'utf-8');
-      
+      const specContent = await fs.readFile(filePath, "utf-8");
+
       // Get session context if provided
       let session: QuestionnaireSession | undefined;
       if (sessionId && this.sessions[sessionId]) {
@@ -354,16 +369,17 @@ The complete specification has been saved to: \`./specs/${specDirName}/${specFil
       }
 
       // Generate validation prompt for Claude to analyze
-      const validationPrompt = this.llmQuestioner.generateCompletenessValidationPrompt({
-        featureTitle: session?.featureTitle || 'Unknown Feature',
-        featureDescription: session?.featureDescription || '',
-        responses: session?.responses || [],
-      });
+      const validationPrompt =
+        this.llmQuestioner.generateCompletenessValidationPrompt({
+          featureTitle: session?.featureTitle || "Unknown Feature",
+          featureDescription: session?.featureDescription || "",
+          responses: session?.responses || [],
+        });
 
       return {
         content: [
           {
-            type: 'text',
+            type: "text",
             text: `🔍 **Specification Validation**
 
 **File**: \`${filePath}\`
@@ -387,7 +403,9 @@ ${validationPrompt}
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to validate specification: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to validate specification: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -401,14 +419,17 @@ ${validationPrompt}
     const progress = engine.getProgress();
     const currentQuestion = engine.getCurrentQuestion();
 
-    const responsesSummary = session.responses.map(r => 
-      `- ${r.questionId}: ${Array.isArray(r.value) ? r.value.join(', ') : String(r.value)}`
-    ).join('\n');
+    const responsesSummary = session.responses
+      .map(
+        (r) =>
+          `- ${r.questionId}: ${Array.isArray(r.value) ? r.value.join(", ") : String(r.value)}`,
+      )
+      .join("\n");
 
     return {
       content: [
         {
-          type: 'text',
+          type: "text",
           text: `📊 **Session Status**
 
 **Feature**: ${session.featureTitle}
@@ -418,16 +439,16 @@ ${validationPrompt}
 **Updated**: ${new Date(session.updatedAt).toLocaleString()}
 
 **Progress**: ${progress.current}/${progress.total} (${progress.percentage}%)
-**Status**: ${engine.isComplete() ? '✅ Complete' : '📝 In Progress'}
+**Status**: ${engine.isComplete() ? "✅ Complete" : "📝 In Progress"}
 
-${currentQuestion ? `**Current Question**: ${currentQuestion.text}` : ''}
+${currentQuestion ? `**Current Question**: ${currentQuestion.text}` : ""}
 
 **Responses So Far**:
-${responsesSummary || 'None yet'}
+${responsesSummary || "None yet"}
 
 **Available Actions**:
 - Continue: \`/spec-continue ${sessionId}\`
-- Generate: \`/spec-generate ${sessionId}\` ${!engine.isComplete() ? '(complete first)' : ''}
+- Generate: \`/spec-generate ${sessionId}\` ${!engine.isComplete() ? "(complete first)" : ""}
 - Follow-up: \`/spec-follow-up ${sessionId}\``,
         },
       ],
@@ -436,12 +457,12 @@ ${responsesSummary || 'None yet'}
 
   async listSessions() {
     const sessionList = Object.values(this.sessions);
-    
+
     if (sessionList.length === 0) {
       return {
         content: [
           {
-            type: 'text',
+            type: "text",
             text: `📝 **No Active Sessions**
 
 No specification sessions found. Start a new one with:
@@ -451,16 +472,18 @@ No specification sessions found. Start a new one with:
       };
     }
 
-    const sessionSummaries = sessionList.map(session => {
-      const engine = QuestionnaireEngine.fromSession(session);
-      const progress = engine.getProgress();
-      return `- \`${session.id}\`: ${session.featureTitle} (${progress.percentage}% complete)`;
-    }).join('\n');
+    const sessionSummaries = sessionList
+      .map((session) => {
+        const engine = QuestionnaireEngine.fromSession(session);
+        const progress = engine.getProgress();
+        return `- \`${session.id}\`: ${session.featureTitle} (${progress.percentage}% complete)`;
+      })
+      .join("\n");
 
     return {
       content: [
         {
-          type: 'text',
+          type: "text",
           text: `📝 **Active SpecCraft Sessions**
 
 ${sessionSummaries}
@@ -481,11 +504,11 @@ ${sessionSummaries}
     }
 
     if (session.responses.length === 0) {
-      throw new Error('No responses yet. Answer some questions first.');
+      throw new Error("No responses yet. Answer some questions first.");
     }
 
     const lastResponse = session.responses[session.responses.length - 1];
-    
+
     const prompt = this.llmQuestioner.generateFollowUpQuestionsPrompt({
       featureTitle: session.featureTitle,
       featureDescription: session.featureDescription,
@@ -496,7 +519,7 @@ ${sessionSummaries}
     return {
       content: [
         {
-          type: 'text',
+          type: "text",
           text: `🤖 **AI-Generated Follow-up Questions**
 
 ${prompt}
@@ -512,14 +535,27 @@ ${prompt}
     };
   }
 
-  async createKeystoneProject({ specPath, projectName, outputPath }: { specPath: string; projectName?: string; outputPath?: string }) {
+  async createKeystoneProject({
+    specPath,
+    projectName,
+    outputPath,
+  }: {
+    specPath: string;
+    projectName?: string;
+    outputPath?: string;
+  }) {
     try {
       const reader = new SpecificationReader();
       const specification = await reader.readSpecification(specPath);
-      
-      const finalProjectName = projectName || specification.title.toLowerCase().replace(/\s+/g, '-');
+
+      const finalProjectName =
+        projectName ||
+        specification.title
+          .toLowerCase()
+          .replace(/[^\w\s-]/g, "")
+          .replace(/\s+/g, "-");
       const finalOutputPath = outputPath || process.cwd();
-      
+
       const generator = new KeystoneProjectGenerator();
       const projectPath = await generator.generateProject({
         projectName: finalProjectName,
@@ -530,7 +566,7 @@ ${prompt}
       return {
         content: [
           {
-            type: 'text',
+            type: "text",
             text: `🎉 **Keystone Project Created!**
 
 **Feature**: ${specification.title}
@@ -545,86 +581,27 @@ ${prompt}
 - ✅ Copied original specification
 
 **Next Steps**:
-1. \`cd ${finalProjectName}\`
-2. \`npm install\`
-3. Set up environment variables
-4. Review \`schema.ts\` and customize
-5. Follow \`docs/IMPLEMENTATION.md\`
+1. \`pnpm install\`
+2. Set up environment variables
+3. Review \`schema.ts\` and customize
+4. Follow \`docs/IMPLEMENTATION.md\`
 
 **Key Files**:
 - \`schema.ts\` - Database models
 - \`docs/IMPLEMENTATION.md\` - Development roadmap
-- \`docs/specs/feature-specification.md\` - Original spec
+- \`${specPath}\` - Original spec
 
 Ready to start development! 🚀`,
           },
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to create Keystone project: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to create Keystone project: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
-  async generateCodeFromSpec({ specPath, targetPath, framework }: { specPath: string; targetPath?: string; framework?: string }) {
-    try {
-      const reader = new SpecificationReader();
-      const specification = await reader.readSpecification(specPath);
-      
-      const finalTargetPath = targetPath || process.cwd();
-      
-      const generator = new FeatureGenerator();
-      const generatedFiles = await generator.generateFeature({
-        targetDirectory: finalTargetPath,
-        specification,
-        framework: framework as any || 'auto',
-      });
-
-      const filesList = generatedFiles.map(file => {
-        const relativePath = path.relative(finalTargetPath, file.path);
-        const icon = file.type === 'component' ? '🧩' : 
-                    file.type === 'schema' ? '🗃️' : 
-                    file.type === 'api' ? '🔌' : 
-                    file.type === 'test' ? '🧪' : '📄';
-        return `  ${icon} \`${relativePath}\``;
-      }).join('\n');
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `🎯 **Feature Code Generated!**
-
-**Feature**: ${specification.title}
-**Target**: \`${finalTargetPath}\`
-**Framework**: ${framework || 'Auto-detected'}
-
-**Generated Files** (${generatedFiles.length} files):
-${filesList}
-
-**Feature Overview**:
-- **Core Features**: ${specification.functionalRequirements.coreFeatures.length} identified
-- **User Workflows**: ${specification.functionalRequirements.userWorkflows.length} mapped
-- **UI Components**: ${specification.uiRequirements.interfaces.length} needed
-- **Integrations**: ${specification.technicalSpecifications.integrations.length} required
-
-**Next Steps**:
-1. Review generated files
-2. Customize implementation details
-3. Add tests for new functionality
-4. Update documentation
-5. Test user workflows
-
-**Implementation Priority**:
-${specification.functionalRequirements.coreFeatures.slice(0, 3).map((feature, i) => `${i + 1}. ${feature}`).join('\n')}
-
-Ready for development! 🚀`,
-          },
-        ],
-      };
-    } catch (error) {
-      throw new Error(`Failed to generate code: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
 
   async analyzeSpecification({ specPath }: { specPath: string }) {
     try {
@@ -637,24 +614,24 @@ Ready for development! 🚀`,
       return {
         content: [
           {
-            type: 'text',
+            type: "text",
             text: `🔍 **Specification Analysis**
 
 **Feature**: ${specification.title}
 **Description**: ${specification.description}
 
 **Complexity Assessment**: ${complexity.level} (${complexity.score}/10)
-${complexity.factors.map(factor => `- ${factor}`).join('\n')}
+${complexity.factors.map((factor) => `- ${factor}`).join("\n")}
 
 **Implementation Breakdown**:
 - **Core Features**: ${specification.functionalRequirements.coreFeatures.length} features
-- **User Workflows**: ${specification.functionalRequirements.userWorkflows.length} workflows  
+- **User Workflows**: ${specification.functionalRequirements.userWorkflows.length} workflows
 - **Technical Requirements**: ${specification.technicalSpecifications.architecture.length} architectural items
 - **UI Components**: ${specification.uiRequirements.interfaces.length} interface elements
 - **Integrations**: ${specification.technicalSpecifications.integrations.length} external integrations
 
 **Development Recommendations**:
-${recommendations.map(rec => `- ${rec}`).join('\n')}
+${recommendations.map((rec) => `- ${rec}`).join("\n")}
 
 **Estimated Timeline**: ${complexity.estimatedDays} days
 **Team Size**: ${complexity.recommendedTeamSize} developers
@@ -666,11 +643,19 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to analyze specification: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to analyze specification: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
-  private calculateComplexity(spec: ParsedSpecification): { level: string; score: number; factors: string[]; estimatedDays: number; recommendedTeamSize: number } {
+  private calculateComplexity(spec: ParsedSpecification): {
+    level: string;
+    score: number;
+    factors: string[];
+    estimatedDays: number;
+    recommendedTeamSize: number;
+  } {
     let score = 0;
     const factors: string[] = [];
 
@@ -714,7 +699,14 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
       factors.push(`Complex business logic (${businessRules} rules)`);
     }
 
-    const level = score <= 3 ? 'Simple' : score <= 6 ? 'Moderate' : score <= 8 ? 'Complex' : 'Very Complex';
+    const level =
+      score <= 3
+        ? "Simple"
+        : score <= 6
+          ? "Moderate"
+          : score <= 8
+            ? "Complex"
+            : "Very Complex";
     const estimatedDays = Math.ceil(score * 2.5 + coreFeatures * 1.5);
     const recommendedTeamSize = score <= 4 ? 1 : score <= 7 ? 2 : 3;
 
@@ -725,67 +717,82 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
     const recommendations: string[] = [];
 
     if (spec.functionalRequirements.coreFeatures.length > 8) {
-      recommendations.push('Consider breaking into multiple development phases');
+      recommendations.push(
+        "Consider breaking into multiple development phases",
+      );
     }
 
     if (spec.technicalSpecifications.integrations.length > 3) {
-      recommendations.push('Plan integration testing strategy early');
-      recommendations.push('Consider using API mocking for development');
+      recommendations.push("Plan integration testing strategy early");
+      recommendations.push("Consider using API mocking for development");
     }
 
     if (spec.uiRequirements.interfaces.length > 10) {
-      recommendations.push('Create a component library first');
-      recommendations.push('Design system planning recommended');
+      recommendations.push("Create a component library first");
+      recommendations.push("Design system planning recommended");
     }
 
     if (spec.functionalRequirements.businessRules.length > 5) {
-      recommendations.push('Implement comprehensive unit testing');
-      recommendations.push('Consider rule engine for complex business logic');
+      recommendations.push("Implement comprehensive unit testing");
+      recommendations.push("Consider rule engine for complex business logic");
     }
 
     if (spec.technicalSpecifications.security.length > 0) {
-      recommendations.push('Security review before deployment');
+      recommendations.push("Security review before deployment");
     }
 
     if (recommendations.length === 0) {
-      recommendations.push('Straightforward implementation expected');
-      recommendations.push('Start with MVP and iterate');
+      recommendations.push("Straightforward implementation expected");
+      recommendations.push("Start with MVP and iterate");
     }
 
     return recommendations;
   }
 
-  async buildFromSpecification({ specPath, projectName, outputPath }: { specPath: string; projectName?: string; outputPath?: string }) {
+  async buildFromSpecification({
+    specPath,
+    projectName,
+    outputPath,
+  }: {
+    specPath: string;
+    projectName?: string;
+    outputPath?: string;
+  }) {
     try {
       const reader = new SpecificationReader();
       const specification = await reader.readSpecification(specPath);
-      
+
       const workingDirectory = outputPath || process.cwd();
       const projectType = await this.detectProjectType(workingDirectory);
-      
-      if (projectType === 'empty' || projectType === 'unknown') {
+
+      if (projectType === "empty" || projectType === "unknown") {
         // Create new Keystone project
-        const finalProjectName = projectName || specification.title.toLowerCase().replace(/\s+/g, '-');
+        const finalProjectName =
+          projectName ||
+          specification.title
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, "")
+            .replace(/\s+/g, "-");
         const generator = new KeystoneProjectGenerator();
         const projectPath = await generator.generateProject({
-          projectName: finalProjectName,
+          projectName: ".", // Use current directory instead of creating subfolder
           outputPath: workingDirectory,
           specification,
         });
 
         // Generate implementation guidance
-        const guidance = this.guidanceProvider.generateImplementationGuidance(specification);
+        const guidance =
+          this.guidanceProvider.generateImplementationGuidance(specification);
 
         return {
           content: [
             {
-              type: 'text',
+              type: "text",
               text: `🎉 **New Keystone Project Created!**
 
 **Decision**: No existing project detected - created new Keystone.js application
 **Feature**: ${specification.title}
-**Project**: ${finalProjectName}
-**Location**: \`${projectPath}\`
+**Location**: Current directory (\`${workingDirectory}\`)
 
 **Generated Structure**:
 - ✅ Cloned o8u-starter template
@@ -799,12 +806,7 @@ ${recommendations.map(rec => `- ${rec}`).join('\n')}
 
 **IMMEDIATE NEXT STEPS - Execute these commands:**
 
-1. **Navigate to project:**
-   \`\`\`bash
-   cd ${finalProjectName}
-   \`\`\`
-
-2. **Install dependencies:**
+1. **Install dependencies:**
    \`\`\`bash
    npm install
    \`\`\`
@@ -835,12 +837,13 @@ Ready to start implementation! 🚀`,
         };
       } else {
         // Provide guidance for existing project
-        const guidance = this.guidanceProvider.generateImplementationGuidance(specification);
+        const guidance =
+          this.guidanceProvider.generateImplementationGuidance(specification);
 
         return {
           content: [
             {
-              type: 'text',
+              type: "text",
               text: `🎯 **Implementation Guidance for Existing ${projectType.toUpperCase()} Project**
 
 **Decision**: Detected existing ${projectType} project - providing implementation guidance
@@ -882,50 +885,59 @@ Ready to implement! ⚡`,
         };
       }
     } catch (error) {
-      throw new Error(`Failed to build from specification: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to build from specification: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
-  private async detectProjectType(directory: string): Promise<'keystone' | 'nextjs' | 'react' | 'empty' | 'unknown'> {
+  private async detectProjectType(
+    directory: string,
+  ): Promise<"keystone" | "nextjs" | "react" | "empty" | "unknown"> {
     try {
       // Check if directory is empty or nearly empty
       const entries = await fs.readdir(directory);
-      const nonHiddenEntries = entries.filter(entry => !entry.startsWith('.'));
-      
+      const nonHiddenEntries = entries.filter(
+        (entry) => !entry.startsWith("."),
+      );
+
       if (nonHiddenEntries.length === 0) {
-        return 'empty';
+        return "empty";
       }
 
       // Check for package.json
-      const packageJsonPath = path.join(directory, 'package.json');
-      if (!await this.fileExists(packageJsonPath)) {
-        return 'empty';
+      const packageJsonPath = path.join(directory, "package.json");
+      if (!(await this.fileExists(packageJsonPath))) {
+        return "empty";
       }
 
-      const packageContent = await fs.readFile(packageJsonPath, 'utf-8');
+      const packageContent = await fs.readFile(packageJsonPath, "utf-8");
       const packageJson = JSON.parse(packageContent);
-      
+
       const dependencies = {
-        ...packageJson.dependencies || {},
-        ...packageJson.devDependencies || {},
+        ...(packageJson.dependencies || {}),
+        ...(packageJson.devDependencies || {}),
       };
 
       // Detect project type based on dependencies
-      if (dependencies['@keystone-6/core'] || dependencies['@keystone-next/keystone']) {
-        return 'keystone';
-      }
-      
-      if (dependencies['next']) {
-        return 'nextjs';
-      }
-      
-      if (dependencies['react'] && !dependencies['next']) {
-        return 'react';
+      if (
+        dependencies["@keystone-6/core"] ||
+        dependencies["@keystone-next/keystone"]
+      ) {
+        return "keystone";
       }
 
-      return 'unknown';
+      if (dependencies["next"]) {
+        return "nextjs";
+      }
+
+      if (dependencies["react"] && !dependencies["next"]) {
+        return "react";
+      }
+
+      return "unknown";
     } catch (error) {
-      return 'empty';
+      return "empty";
     }
   }
 
@@ -938,25 +950,28 @@ Ready to implement! ⚡`,
     }
   }
 
-  private generateIntegrationInstructions(projectType: string, spec: ParsedSpecification): string {
-    const featureName = spec.title.toLowerCase().replace(/\s+/g, '_');
-    
+  private generateIntegrationInstructions(
+    projectType: string,
+    spec: ParsedSpecification,
+  ): string {
+    const featureName = spec.title.toLowerCase().replace(/\s+/g, "_");
+
     switch (projectType) {
-      case 'keystone':
+      case "keystone":
         return `- Import schema: Add \`${this.pascalCase(featureName)}\` to your main \`schema.ts\`
 - Admin UI: Generated admin components in \`admin/components/\`
 - API hooks: Business logic hooks in \`api/${featureName}Hooks.ts\``;
-      
-      case 'nextjs':
+
+      case "nextjs":
         return `- Add page route: Import component in your routing structure
 - API endpoints: Generated in \`pages/api/${featureName}/\`
 - Components: Available in \`components/${featureName}/\``;
-      
-      case 'react':
+
+      case "react":
         return `- Import component: Add to your component library
 - Custom hooks: Available in \`src/hooks/use${this.pascalCase(featureName)}.ts\`
 - Types: Generated TypeScript definitions`;
-      
+
       default:
         return `- Review generated files in the project structure
 - Follow implementation plan in generated documentation
@@ -974,7 +989,7 @@ Ready to implement! ⚡`,
 ${schema.purpose}
 
 **Recommended Fields**:
-${schema.fields.map(field => `- \`${field.name}\`: ${field.type} - ${field.purpose}`).join('\n')}
+${schema.fields.map((field) => `- \`${field.name}\`: ${field.type} - ${field.purpose}`).join("\n")}
 
 **Implementation Pattern**:
 \`\`\`typescript
@@ -985,106 +1000,129 @@ ${schema.example}
     // Key patterns
     if (guidance.patterns.length > 0) {
       sections.push(`**Implementation Patterns**:
-${guidance.patterns.map(pattern => `- **${pattern.name}**: ${pattern.description}`).join('\n')}`);
+${guidance.patterns.map((pattern) => `- **${pattern.name}**: ${pattern.description}`).join("\n")}`);
     }
 
     // Hook examples
     if (guidance.hooks.length > 0) {
       sections.push(`**Essential Hooks**:
-${guidance.hooks.slice(0, 2).map(hook => `- **${hook.type}**: ${hook.purpose}`).join('\n')}`);
+${guidance.hooks
+  .slice(0, 2)
+  .map((hook) => `- **${hook.type}**: ${hook.purpose}`)
+  .join("\n")}`);
     }
 
-    return sections.join('\n\n');
+    return sections.join("\n\n");
   }
 
-  private formatImplementationInstructions(guidance: KeystoneGuidance, specification: ParsedSpecification): string {
+  private formatImplementationInstructions(
+    guidance: KeystoneGuidance,
+    specification: ParsedSpecification,
+  ): string {
     const instructions: string[] = [];
-    
+
     // Schema entities to implement
     if (guidance.schemas.length > 0) {
       instructions.push(`   **📋 Schema Entities to Create:**`);
       guidance.schemas.forEach((schema, index) => {
-        const entityName = index === 0 ? specification.title : `${specification.title}${index + 1}`;
+        const entityName =
+          index === 0
+            ? specification.title
+            : `${specification.title}${index + 1}`;
         instructions.push(`   - **${entityName}**: ${schema.purpose}`);
-        instructions.push(`     Fields: ${schema.fields.map(f => f.name).join(', ')}`);
+        instructions.push(
+          `     Fields: ${schema.fields.map((f) => f.name).join(", ")}`,
+        );
       });
     }
-    
+
     // Key relationships
     if (specification.functionalRequirements.userWorkflows.length > 0) {
       instructions.push(`   **🔗 Key Relationships:**`);
-      instructions.push(`   - User → ${specification.title} (ownership/association)`);
-      instructions.push(`   - Implement workflow: ${specification.functionalRequirements.userWorkflows[0]}`);
+      instructions.push(
+        `   - User → ${specification.title} (ownership/association)`,
+      );
+      instructions.push(
+        `   - Implement workflow: ${specification.functionalRequirements.userWorkflows[0]}`,
+      );
     }
-    
+
     // Access control
     instructions.push(`   **🔒 Access Control:**`);
     instructions.push(`   - Implement role-based permissions`);
     instructions.push(`   - Secure admin interface access`);
-    
+
     // Business logic
     if (specification.functionalRequirements.businessRules.length > 0) {
       instructions.push(`   **⚙️ Business Logic:**`);
-      specification.functionalRequirements.businessRules.slice(0, 3).forEach(rule => {
-        instructions.push(`   - ${rule}`);
-      });
+      specification.functionalRequirements.businessRules
+        .slice(0, 3)
+        .forEach((rule) => {
+          instructions.push(`   - ${rule}`);
+        });
     }
-    
-    return instructions.join('\n');
+
+    return instructions.join("\n");
   }
 
-  private formatImplementationSteps(projectType: string, spec: ParsedSpecification): string {
+  private formatImplementationSteps(
+    projectType: string,
+    spec: ParsedSpecification,
+  ): string {
     const featureName = spec.title;
     const steps: string[] = [];
 
     switch (projectType) {
-      case 'keystone':
+      case "keystone":
         steps.push(
           `1. **Define Schema**: Create ${featureName} list in schema.ts`,
           `2. **Add Fields**: Implement ${spec.functionalRequirements.coreFeatures.length} core features as fields`,
           `3. **Set Up Relationships**: Connect to User and other relevant entities`,
           `4. **Configure Access Control**: Implement appropriate permissions`,
           `5. **Add Business Logic**: Use hooks for ${spec.functionalRequirements.businessRules.length} business rules`,
-          `6. **Customize Admin UI**: Enhance the admin interface as needed`
+          `6. **Customize Admin UI**: Enhance the admin interface as needed`,
         );
         break;
-      
-      case 'nextjs':
+
+      case "nextjs":
         steps.push(
           `1. **Create Pages**: Add routes for ${featureName} functionality`,
           `2. **API Routes**: Implement backend endpoints`,
           `3. **Components**: Build React components for UI`,
           `4. **State Management**: Add context or state handling`,
-          `5. **Integration**: Connect components to API routes`
+          `5. **Integration**: Connect components to API routes`,
         );
         break;
-      
-      case 'react':
+
+      case "react":
         steps.push(
           `1. **Create Components**: Build ${featureName} React components`,
           `2. **Custom Hooks**: Implement data fetching and state logic`,
           `3. **Type Definitions**: Add TypeScript interfaces`,
-          `4. **Integration**: Connect to your existing architecture`
+          `4. **Integration**: Connect to your existing architecture`,
         );
         break;
-      
+
       default:
         steps.push(
           `1. **Plan Architecture**: Design how ${featureName} fits your system`,
           `2. **Create Modules**: Implement core functionality`,
           `3. **Add Tests**: Cover ${spec.functionalRequirements.coreFeatures.length} core features`,
-          `4. **Documentation**: Document API and usage`
+          `4. **Documentation**: Document API and usage`,
         );
     }
 
-    return steps.join('\n');
+    return steps.join("\n");
   }
 
-  private formatFrameworkGuidance(projectType: string, spec: ParsedSpecification): string {
-    const featureName = spec.title.replace(/\s+/g, '');
-    
+  private formatFrameworkGuidance(
+    projectType: string,
+    spec: ParsedSpecification,
+  ): string {
+    const featureName = spec.title.replace(/\s+/g, "");
+
     switch (projectType) {
-      case 'nextjs':
+      case "nextjs":
         return `**Next.js Implementation Approach**:
 
 **File Structure**:
@@ -1099,7 +1137,7 @@ ${guidance.hooks.slice(0, 2).map(hook => `- **${hook.type}**: ${hook.purpose}`).
 - Create reusable components
 - Add proper TypeScript types`;
 
-      case 'react':
+      case "react":
         return `**React Implementation Approach**:
 
 **Component Structure**:
@@ -1125,29 +1163,33 @@ ${guidance.hooks.slice(0, 2).map(hook => `- **${hook.type}**: ${hook.purpose}`).
   async lookupDocumentation({ topic }: { topic: string }) {
     try {
       const documentation = await this.docProvider.lookup(topic);
-      
+
       if (!documentation) {
         const availableTopics = this.docProvider.getAllTopics();
         const suggestions = availableTopics
-          .filter(t => t.toLowerCase().includes(topic.toLowerCase()))
+          .filter((t) => t.toLowerCase().includes(topic.toLowerCase()))
           .slice(0, 5);
 
         return {
           content: [
             {
-              type: 'text',
+              type: "text",
               text: `❓ **Documentation Not Found**
 
 **Topic**: "${topic}"
 
-${suggestions.length > 0 ? `**Similar Topics**:
-${suggestions.map(s => `- \`${s}\``).join('\n')}
+${
+  suggestions.length > 0
+    ? `**Similar Topics**:
+${suggestions.map((s) => `- \`${s}\``).join("\n")}
 
-**Usage**: \`/speccraft:help <topic>\`` : '**Available Topics**:\nUse `/speccraft:help examples` to see all available documentation topics.'}
+**Usage**: \`/speccraft:help <topic>\``
+    : "**Available Topics**:\nUse `/speccraft:help examples` to see all available documentation topics."
+}
 
 **Popular Topics**:
 - \`text\` - Text field documentation
-- \`relationship\` - Relationship field documentation  
+- \`relationship\` - Relationship field documentation
 - \`user-owned\` - User-owned content pattern
 - \`audit-trail\` - Audit trail implementation
 - \`list-view\` - Admin list view customization
@@ -1167,18 +1209,26 @@ Ask me to "look up the latest Keystone.js documentation for ${topic}" and I'll f
       return {
         content: [
           {
-            type: 'text',
+            type: "text",
             text: `📚 **${documentation.topic}**
 
 ${documentation.content}
 
 **Examples**:
-${documentation.examples.map(example => `\`\`\`typescript
+${documentation.examples
+  .map(
+    (example) => `\`\`\`typescript
 ${example}
-\`\`\``).join('\n\n')}
+\`\`\``,
+  )
+  .join("\n\n")}
 
-${documentation.relatedTopics.length > 0 ? `**Related Topics**:
-${documentation.relatedTopics.map(topic => `- \`/speccraft:help ${topic}\``).join('\n')}` : ''}
+${
+  documentation.relatedTopics.length > 0
+    ? `**Related Topics**:
+${documentation.relatedTopics.map((topic) => `- \`/speccraft:help ${topic}\``).join("\n")}`
+    : ""
+}
 
 **Official Resources**:
 For the latest documentation and examples:
@@ -1191,21 +1241,49 @@ Ask Claude Code to "fetch the latest Keystone.js documentation for ${topic}" to 
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to lookup documentation: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `❌ **Documentation Lookup Error**
+
+Sorry, I encountered an error while looking up documentation for "${topic}".
+
+**Error**: ${error instanceof Error ? error.message : String(error)}
+
+**Fallback Options**:
+- Try \`/speccraft:help text\` for text field documentation
+- Try \`/speccraft:help relationship\` for relationship documentation  
+- Ask Claude Code to "fetch the latest Keystone.js documentation for ${topic}"
+
+**Available Topics**:
+${this.docProvider.getAllTopics().slice(0, 10).map(t => `- \`${t}\``).join('\n')}`,
+          },
+        ],
+      };
     }
   }
 
-  async fetchKeystoneDocumentation({ docPath, section }: { docPath: string; section?: string }) {
+  async fetchKeystoneDocumentation({
+    docPath,
+    section,
+  }: {
+    docPath: string;
+    section?: string;
+  }) {
     try {
-      const documentation = await this.docProvider.fetchFromGitHub(docPath, docPath);
-      
+      const documentation = await this.docProvider.fetchFromGitHub(
+        docPath,
+        docPath,
+      );
+
       if (!documentation) {
         return {
           content: [
             {
-              type: 'text',
+              type: "text",
               text: `❌ **Documentation Not Found**
-              
+
 **Document Path**: ${docPath}
 **Error**: Unable to fetch documentation from Keystone.js repository
 
@@ -1227,10 +1305,13 @@ Ask Claude Code to "fetch the latest Keystone.js documentation for ${topic}" to 
       }
 
       let content = documentation.content;
-      
+
       // If a specific section is requested, try to extract it
       if (section) {
-        const sectionRegex = new RegExp(`#{1,6}\\s*${section}[\\s\\S]*?(?=#{1,6}|$)`, 'i');
+        const sectionRegex = new RegExp(
+          `#{1,6}\\s*${section}[\\s\\S]*?(?=#{1,6}|$)`,
+          "i",
+        );
         const sectionMatch = content.match(sectionRegex);
         if (sectionMatch) {
           content = sectionMatch[0];
@@ -1240,28 +1321,40 @@ Ask Claude Code to "fetch the latest Keystone.js documentation for ${topic}" to 
       return {
         content: [
           {
-            type: 'text',
+            type: "text",
             text: `📚 **Keystone.js Documentation: ${documentation.topic}**
 
-${section ? `**Section**: ${section}\n\n` : ''}**Source**: ${documentation.source}
+${section ? `**Section**: ${section}\n\n` : ""}**Source**: ${documentation.source}
 
 ---
 
 ${content}
 
-${documentation.examples.length > 0 ? `
+${
+  documentation.examples.length > 0
+    ? `
 
 **Code Examples**:
-${documentation.examples.map((example, i) => `
+${documentation.examples
+  .map(
+    (example, i) => `
 **Example ${i + 1}**:
 \`\`\`
 ${example}
 \`\`\`
-`).join('\n')}` : ''}
+`,
+  )
+  .join("\n")}`
+    : ""
+}
 
-${documentation.relatedTopics.length > 0 ? `
+${
+  documentation.relatedTopics.length > 0
+    ? `
 
-**Related Topics**: ${documentation.relatedTopics.join(', ')}` : ''}
+**Related Topics**: ${documentation.relatedTopics.join(", ")}`
+    : ""
+}
 
 **Alternative Sources**:
 If the main docs are insufficient, also check:
@@ -1273,29 +1366,37 @@ If the main docs are insufficient, also check:
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to provide documentation URL: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to provide documentation URL: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
-  async fetchKeystoneExample({ exampleName, filePath }: { exampleName: string; filePath?: string }) {
+  async fetchKeystoneExample({
+    exampleName,
+    filePath,
+  }: {
+    exampleName: string;
+    filePath?: string;
+  }) {
     try {
       const examplePath = filePath ? `${exampleName}/${filePath}` : exampleName;
       const example = await this.docProvider.getExample(exampleName, filePath);
-      
+
       if (!example) {
         return {
           content: [
             {
-              type: 'text',
+              type: "text",
               text: `❌ **Example Not Found**
-              
+
 **Example**: ${exampleName}
-${filePath ? `**File**: ${filePath}` : ''}
+${filePath ? `**File**: ${filePath}` : ""}
 **Error**: Unable to fetch example from Keystone.js repository
 
 **Available Examples**:
 - \`blog\` - Basic blog with posts and authors
-- \`ecommerce\` - E-commerce with products and orders  
+- \`ecommerce\` - E-commerce with products and orders
 - \`auth\` - Authentication and user management
 - \`custom-field\` - Custom field implementations
 - \`roles\` - Role-based access control
@@ -1313,7 +1414,7 @@ ${filePath ? `**File**: ${filePath}` : ''}
       return {
         content: [
           {
-            type: 'text',
+            type: "text",
             text: `🔍 **Keystone.js Example: ${example.topic}**
 
 **Source**: ${example.source}
@@ -1351,11 +1452,15 @@ ${example.content}
         ],
       };
     } catch (error) {
-      throw new Error(`Failed to provide example URL: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to provide example URL: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   private pascalCase(str: string): string {
-    return str.replace(/(?:^|\s|_)(\w)/g, (_, char) => char.toUpperCase()).replace(/[\s_]/g, '');
+    return str
+      .replace(/(?:^|\s|_)(\w)/g, (_, char) => char.toUpperCase())
+      .replace(/[\s_]/g, "");
   }
 }

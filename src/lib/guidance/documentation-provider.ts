@@ -22,19 +22,24 @@ export class KeystoneDocumentationProvider {
   }
 
   async lookup(topic: string): Promise<DocumentationLookup | null> {
-    // Check cache first
-    if (this.documentationCache.has(topic)) {
-      return this.documentationCache.get(topic)!;
-    }
+    try {
+      // Check cache first
+      if (this.documentationCache.has(topic)) {
+        return this.documentationCache.get(topic)!;
+      }
 
-    // Try to fetch from GitHub
-    const result = await this.fetchDocumentationFromGitHub(topic);
-    if (result) {
-      this.documentationCache.set(topic, result);
-      return result;
-    }
+      // Try to fetch from GitHub
+      const result = await this.fetchDocumentationFromGitHub(topic);
+      if (result) {
+        this.documentationCache.set(topic, result);
+        return result;
+      }
 
-    return null;
+      return null;
+    } catch (error) {
+      console.warn(`Error in documentation lookup for topic "${topic}":`, error);
+      return null;
+    }
   }
 
   async getFieldDocumentation(fieldType: string): Promise<DocumentationLookup | null> {
@@ -114,21 +119,41 @@ export class KeystoneDocumentationProvider {
     // Map common topic names to documentation paths
     const topicMappings: Record<string, string> = {
       'text': 'fields/text',
-      'relationship': 'fields/relationship', 
+      'relationship': 'fields/relationship',
+      'relationships': 'fields/relationship', // Handle plural
+      'relation': 'fields/relationship', // Handle synonym
+      'relations': 'fields/relationship', // Handle plural synonym
       'select': 'fields/select',
       'integer': 'fields/integer',
+      'number': 'fields/integer', // Handle synonym
       'float': 'fields/float',
+      'decimal': 'fields/float', // Handle synonym
       'checkbox': 'fields/checkbox',
+      'boolean': 'fields/checkbox', // Handle synonym
+      'bool': 'fields/checkbox', // Handle synonym
       'timestamp': 'fields/timestamp',
+      'datetime': 'fields/timestamp', // Handle synonym
+      'date': 'fields/timestamp', // Handle synonym
       'image': 'fields/image',
+      'images': 'fields/image', // Handle plural
       'file': 'fields/file',
+      'files': 'fields/file', // Handle plural
       'json': 'fields/json',
       'virtual': 'fields/virtual',
       'schema': 'guides/schema',
+      'schemas': 'guides/schema', // Handle plural
       'hooks': 'guides/hooks',
+      'hook': 'guides/hooks', // Handle singular
       'access-control': 'guides/access-control',
+      'access': 'guides/access-control', // Handle short form
+      'auth': 'guides/access-control', // Handle synonym
+      'authentication': 'guides/access-control', // Handle synonym
+      'authorization': 'guides/access-control', // Handle synonym
       'admin-ui': 'guides/admin-ui',
-      'testing': 'guides/testing'
+      'admin': 'guides/admin-ui', // Handle short form
+      'ui': 'guides/admin-ui', // Handle short form
+      'testing': 'guides/testing',
+      'tests': 'guides/testing' // Handle plural
     };
 
     const docPath = topicMappings[topic] || topic;

@@ -8,9 +8,6 @@ args:
   - name: project_name
     description: Name for new project (optional)
     required: false
-  - name: output_path
-    description: Target directory (optional)
-    required: false
 ---
 
 # Build from Specification
@@ -22,7 +19,7 @@ Intelligently analyzes your project context and provides implementation guidance
 ## Usage
 
 ```
-/speccraft:build <spec-path> [project-name] [output-path]
+/speccraft:build <spec-path> [project-name]
 ```
 
 ## Examples
@@ -36,7 +33,7 @@ Intelligently analyzes your project context and provides implementation guidance
 ```
 
 ```
-/speccraft:build ./feature-spec.md "" ./projects/
+/speccraft:build ./feature-spec.md
 ```
 
 ## How It Works
@@ -47,27 +44,27 @@ The build command analyzes your current directory and provides Claude Code with 
 
 #### 🆕 **New Project Creation**
 **When**: No existing project detected (empty directory or no package.json)
-**Action**: 
-1. Creates a complete Keystone.js project using the [o8u-starter](https://github.com/OpenSaasAU/o8u-starter) template
+**Action**:
+1. Creates a complete Keystone.js project using the [o8u-starter](https://github.com/OpenSaasAU/o8u-starter) template in the current folder
 2. **Provides Claude Code with step-by-step implementation instructions**
 3. Directs Claude Code to use `/spec-fetch-docs` and `/spec-fetch-example` for live documentation
 
 **What Claude Code Receives**:
-- Direct commands to execute (`cd project-name`, `npm install`)
+- Direct commands to execute (`pnpm install`)
 - Specific implementation areas (schema entities, relationships, business logic)
 - Instructions to fetch live Keystone.js documentation using MCP tools
 - Testing commands to validate implementation
 
 #### ⚡ **Feature Addition to Existing Projects**
 **When**: Existing project detected (finds package.json with framework dependencies)
-**Action**: 
+**Action**:
 1. Analyzes existing project structure
 2. **Provides Claude Code with integration instructions**
 3. Guides implementation using current project patterns
 
 **Supported Frameworks**:
-- **Keystone.js**: Schema extensions, admin components, API hooks
-- **Next.js**: Pages, API routes, React components  
+- **Keystone.js**: Schema extensions, admin components, list hooks
+- **Next.js**: App Router, React components
 - **React**: Components, custom hooks, TypeScript types
 - **Generic**: Implementation plans and base modules
 
@@ -81,30 +78,27 @@ After running the build command, Claude Code receives:
 
 IMMEDIATE NEXT STEPS - Execute these commands:
 
-1. Navigate to project:
-   cd project-name
+1. Install dependencies:
+   pnpm install
 
-2. Install dependencies:
-   npm install
-
-3. Use the SpecCraft MCP tools to get implementation details:
+2. Use the SpecCraft MCP tools to get implementation details:
    - Use /spec-fetch-docs fields/text to understand field types
    - Use /spec-fetch-docs guides/schemas for schema patterns
    - Use /spec-fetch-example blog for reference implementations
 
-4. Implement the schema in schema.ts:
-   - Read the specification in ./SPECIFICATION.md
+3. Implement the the feature spec:
+   - Read the specification in $1
    - Replace basic schema with entities from the specification
    - Follow Keystone.js field type patterns
 
-5. Key Implementation Areas:
+4. Key Implementation Areas:
    📋 Schema Entities to Create
-   🔗 Key Relationships  
+   🔗 Key Relationships
    🔒 Access Control
    ⚙️ Business Logic
 
-6. Test the implementation:
-   npm run dev
+5. Test the implementation:
+   pnpm run dev
 ```
 
 ### Existing Project Enhancement
@@ -116,6 +110,7 @@ For existing projects, Claude Code receives:
 IMMEDIATE NEXT STEPS:
 
 1. Analyze the existing project structure
+2. Read the feature specification in $1
 2. Use SpecCraft MCP tools for implementation guidance
 3. Implementation steps based on detected framework
 4. Key implementation areas specific to the feature
@@ -184,11 +179,6 @@ flowchart TD
 ### Custom Project Name
 ```
 /speccraft:build ./spec.md "custom-project-name"
-```
-
-### Specific Output Directory
-```
-/speccraft:build ./spec.md "" ./projects/
 ```
 
 ### Building in Subdirectory

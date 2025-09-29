@@ -100,9 +100,10 @@ When this command is executed:
    - Use `spec_status` to check if specification is complete
    - When ready, call `spec_generate` to create the markdown specification
 
-6. **Automatic Implementation**:
-   - After specification is generated, automatically call `spec_build` to provide implementation guidance
-   - Present implementation instructions to start coding immediately
+6. **Present Next Steps**:
+   - After specification is generated, present the file location to the user
+   - Recommend using `/speccraft:validate <spec-path>` to check quality
+   - Suggest using `/speccraft:build <spec-path>` when ready to implement
 
 ## Sample Conversation Flow
 
@@ -123,9 +124,15 @@ Claude Code: Perfect! That helps establish the value proposition. Now, let's thi
 
 [Conversation continues naturally until specification is complete]
 
-Claude Code: Great! I have all the information needed. Let me generate your specification and set up implementation guidance.
+Claude Code: Great! I have all the information needed. Let me generate your specification.
 
-[Automatically generates spec and provides build instructions]
+[Generates specification and saves to file]
+
+Claude Code: Perfect! Your specification has been created at ./specs/001_product_reviews/product_reviews_spec.md
+
+I recommend reviewing the specification and then:
+1. Run `/speccraft:validate ./specs/001_product_reviews/product_reviews_spec.md` to check quality
+2. When you're satisfied, run `/speccraft:build ./specs/001_product_reviews/product_reviews_spec.md` to start implementation
 ```
 
 ## Benefits
