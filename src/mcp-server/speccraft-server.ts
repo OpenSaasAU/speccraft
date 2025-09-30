@@ -906,6 +906,16 @@ ${recommendations.map((rec) => `- ${rec}`).join("\n")}
           requiresAuth
         );
 
+        // Generate and write CLAUDE.md file
+        const claudeMdContent = this.guidanceProvider.generateClaudeMd(
+          specification,
+          requiresAuth
+        );
+        await fs.writeFile(
+          path.join(workingDirectory, 'CLAUDE.md'),
+          claudeMdContent
+        );
+
         return {
           content: [
             {
@@ -920,6 +930,7 @@ ${recommendations.map((rec) => `- ${rec}`).join("\n")}
 **Generated Structure**:
 - ✅ Cloned o8u-starter template
 - ✅ Updated package.json and README
+- ✅ Created \`CLAUDE.md\` with architecture patterns
 - ✅ Created implementation roadmap
 - ✅ Copied original specification
 
@@ -986,12 +997,14 @@ ${this.formatImplementationInstructions(guidance, specification)}
 
 ## 📚 **Key Documentation References**
 
+- **Project Architecture Guide**: \`CLAUDE.md\` (✨ created in project root)
+- **Your Specification**: \`SPECIFICATION.md\`
 - **Keystone getContext()**: https://keystonejs.com/docs/apis/context
 - **Next.js Server Actions**: https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions
 ${requiresAuth ? '- **NextAuth.js v5**: https://authjs.dev/getting-started/introduction' : ''}
 - **Neon Serverless**: https://neon.tech/docs/guides/vercel
 
-**Remember**: This architecture is battle-tested from on-the-hill-drama-club. Follow the patterns exactly for best results! 🚀`,
+**Remember**: \`CLAUDE.md\` contains all critical patterns and examples. Read it before coding! 🚀`,
             },
           ],
         };
