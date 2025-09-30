@@ -897,15 +897,25 @@ ${recommendations.map((rec) => `- ${rec}`).join("\n")}
         const guidance =
           this.guidanceProvider.generateImplementationGuidance(specification);
 
+        // Check if auth is required
+        const requiresAuth = this.specRequiresAuth(specification);
+
+        // Generate opinionated architecture guidance
+        const archGuidance = this.guidanceProvider.generateArchitectureGuidance(
+          specification,
+          requiresAuth
+        );
+
         return {
           content: [
             {
               type: "text",
-              text: `🎉 **New Keystone Project Created!**
+              text: `🎉 **New Next.js + Keystone Project Created!**
 
-**Decision**: No existing project detected - created new Keystone.js application
+**Decision**: No existing project detected - created new full-stack application
 **Feature**: ${specification.title}
 **Location**: Current directory (\`${workingDirectory}\`)
+**Architecture**: Next.js 15 + Keystone 6 + Neon PostgreSQL${requiresAuth ? ' + NextAuth 5' : ''}
 
 **Generated Structure**:
 - ✅ Cloned o8u-starter template
@@ -915,36 +925,73 @@ ${recommendations.map((rec) => `- ${rec}`).join("\n")}
 
 ---
 
+## 🏗️ **OPINIONATED ARCHITECTURE (Based on on-the-hill-drama-club)**
+
+${archGuidance.fileStructure}
+
+${archGuidance.keystoneSetup}
+
+${requiresAuth ? archGuidance.nextAuthSetup : ''}
+
+${archGuidance.apiRoutes}
+
+---
+
+## ⚠️ **CRITICAL PATTERNS - READ BEFORE CODING**
+
+${archGuidance.criticalPatterns.join('\n')}
+
+---
+
 ## 🚀 **CLAUDE CODE: IMPLEMENT THIS FEATURE NOW**
 
-**IMMEDIATE NEXT STEPS - Execute these commands:**
+**IMMEDIATE NEXT STEPS:**
 
 1. **Install dependencies:**
    \`\`\`bash
-   npm install
+   pnpm install
    \`\`\`
 
-3. **Use the SpecCraft MCP tools to get implementation details:**
-   - Use \`/spec-fetch-docs fields/text\` to understand field types
-   - Use \`/spec-fetch-docs guides/schemas\` for schema patterns
-   - Use \`/spec-fetch-example blog\` for reference implementations
+2. **Set up required files following the architecture above:**
+   - Create \`src/keystone/context/index.ts\` with getContext() setup
+   - Create \`src/app/api/graphql/route.ts\` for GraphQL endpoint
+   ${requiresAuth ? '- Create `src/lib/auth.ts` for NextAuth configuration\n   - Set up User list with auth fields (email, password, role, allowAdminUI)' : ''}
+   - Create your feature list in \`src/keystone/lists/${this.pascalCase(specification.title)}.ts\`
 
-4. **Implement the schema in \`schema.ts\`:**
-   - Read the specification in \`./SPECIFICATION.md\`
-   - Replace the basic schema with entities from the specification
-   - Follow Keystone.js field type patterns
+3. **Use SpecCraft MCP tools for implementation details:**
+   - \`/spec-fetch-docs fields/text\` - Understand field types
+   - \`/spec-fetch-docs guides/schemas\` - Schema patterns
+   - \`/spec-fetch-docs guides/access-control\` - Security patterns
+   ${requiresAuth ? '- `/spec-fetch-example auth` - Authentication examples' : ''}
 
-5. **Key Implementation Areas:**
+4. **Implement your feature following these patterns:**
 ${this.formatImplementationInstructions(guidance, specification)}
+
+5. **Configure environment variables:**
+   \`\`\`env
+   DATABASE_URL="your-neon-postgres-url"
+   ${requiresAuth ? 'NEXTAUTH_SECRET="generate-with-openssl-rand-base64-32"\n   NEXTAUTH_URL="http://localhost:3000"' : ''}
+   ${requiresAuth && specification.description.toLowerCase().includes('google') ? 'GOOGLE_CLIENT_ID="your-google-client-id"\n   GOOGLE_CLIENT_SECRET="your-google-client-secret"' : ''}
+   \`\`\`
 
 6. **Test the implementation:**
    \`\`\`bash
-   npm run dev
+   pnpm dev
    \`\`\`
+   - Next.js: http://localhost:3000
+   - Keystone Admin: http://localhost:3000/admin
+   - GraphQL API: http://localhost:3000/api/graphql
 
-**Remember**: Use the SpecCraft MCP tools (\`/spec-fetch-docs\` and \`/spec-fetch-example\`) whenever you need specific Keystone.js documentation during implementation.
+---
 
-Ready to start implementation! 🚀`,
+## 📚 **Key Documentation References**
+
+- **Keystone getContext()**: https://keystonejs.com/docs/apis/context
+- **Next.js Server Actions**: https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions
+${requiresAuth ? '- **NextAuth.js v5**: https://authjs.dev/getting-started/introduction' : ''}
+- **Neon Serverless**: https://neon.tech/docs/guides/vercel
+
+**Remember**: This architecture is battle-tested from on-the-hill-drama-club. Follow the patterns exactly for best results! 🚀`,
             },
           ],
         };
@@ -1569,6 +1616,26 @@ ${example.content}
         `Failed to provide example URL: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  private specRequiresAuth(spec: ParsedSpecification): boolean {
+    // Check specification content for authentication requirements
+    const specText = JSON.stringify(spec).toLowerCase();
+
+    const authKeywords = [
+      'authentication',
+      'login',
+      'register',
+      'sign in',
+      'sign up',
+      'user account',
+      'password',
+      'oauth',
+      'social login',
+      'auth',
+    ];
+
+    return authKeywords.some(keyword => specText.includes(keyword));
   }
 
   private pascalCase(str: string): string {

@@ -68,6 +68,14 @@ export interface ImplementationPattern {
   example?: string;
 }
 
+export interface ArchitectureGuidance {
+  fileStructure: string;
+  keystoneSetup: string;
+  nextAuthSetup: string;
+  apiRoutes: string;
+  criticalPatterns: string[];
+}
+
 export class KeystoneGuidanceProvider {
   generateImplementationGuidance(spec: ParsedSpecification): KeystoneGuidance {
     return {
@@ -78,6 +86,273 @@ export class KeystoneGuidanceProvider {
       examples: this.getRelevantExamples(spec),
       patterns: this.getImplementationPatterns(spec),
     };
+  }
+
+  generateArchitectureGuidance(spec: ParsedSpecification, requiresAuth: boolean): ArchitectureGuidance {
+    return {
+      fileStructure: this.getOpinionatedFileStructure(),
+      keystoneSetup: this.getKeystoneContextSetup(),
+      nextAuthSetup: requiresAuth ? this.getNextAuthSetup() : '',
+      apiRoutes: this.getAPIRouteSetup(),
+      criticalPatterns: this.getCriticalPatterns(requiresAuth),
+    };
+  }
+
+  private getOpinionatedFileStructure(): string {
+    return `## 📁 Required File Structure (Based on on-the-hill-drama-club)
+
+\`\`\`
+src/
+├── app/                          # Next.js 15 App Router
+│   ├── api/
+│   │   ├── graphql/
+│   │   │   └── route.ts         # GraphQL API endpoint (uses Yoga + Keystone)
+│   │   └── auth/
+│   │       └── [...nextauth]/   # NextAuth routes (if auth required)
+│   ├── admin/                    # Keystone Admin UI pages
+│   └── (your feature routes)/
+├── keystone/
+│   ├── context/
+│   │   └── index.ts             # **CRITICAL**: getContext() setup
+│   ├── lists/                    # Keystone schema definitions
+│   │   ├── User.ts
+│   │   └── (your list).ts
+│   ├── schema.ts                 # Exports all lists
+│   └── helpers.ts                # Access control helpers (isAdmin, isLoggedIn)
+├── lib/
+│   ├── auth.ts                   # NextAuth configuration (if auth required)
+│   └── utils.ts
+└── types/
+    └── session.ts                # NextAuth session types
+
+keystone.ts                       # Root Keystone config
+schema.prisma                     # Prisma schema
+\`\`\``;
+  }
+
+  private getKeystoneContextSetup(): string {
+    return `## 🔧 Keystone Context Setup (CRITICAL)
+
+**Location**: \`src/keystone/context/index.ts\`
+
+\`\`\`typescript
+import { getContext } from '@keystone-6/core/context';
+import config from '../../../keystone';
+import * as PrismaModule from '.prisma/client';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { PrismaNeon } from '@prisma/adapter-neon';
+import { Prisma PrismaClient } from '@prisma/client';
+
+// Neon serverless driver for Vercel deployment
+neonConfig.webSocketConstructor = ws;
+const connectionString = process.env.DATABASE_URL!;
+
+// Custom Prisma Client with Neon adapter
+class NeonPrismaClient extends PrismaClient {
+  constructor() {
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaNeon(pool);
+    super({ adapter });
+  }
+}
+
+// Global singleton pattern (prevents multiple instances in dev)
+export const keystoneContext: Context =
+  globalThis.keystoneContext ||
+  getContext(config, { ...PrismaModule, PrismaClient: NeonPrismaClient });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.keystoneContext = keystoneContext;
+}
+
+// Export for use in API routes and server actions
+export type Context = typeof keystoneContext;
+\`\`\`
+
+**Why This Matters**:
+- ❌ **NEVER** start a separate GraphQL server
+- ✅ **ALWAYS** use \`getContext()\` to embed Keystone in Next.js
+- ✅ Use Neon adapter for serverless PostgreSQL on Vercel
+- ✅ Global singleton prevents multiple connections in development`;
+  }
+
+  private getNextAuthSetup(): string {
+    return `## 🔐 NextAuth Configuration (CRITICAL for Auth Features)
+
+**Location**: \`src/lib/auth.ts\`
+
+\`\`\`typescript
+import NextAuth from 'next-auth';
+import GoogleProvider from 'next-auth/providers/google';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { keystoneContext } from '@/keystone/context';
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+    CredentialsProvider({
+      name: 'Email and Password',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+
+        // **CRITICAL**: Use keystoneContext.sudo() for auth queries
+        const user = await keystoneContext.sudo().query.User.findOne({
+          where: { email: credentials.email },
+          query: 'id name email password',
+        });
+
+        if (!user || !user.password) return null;
+
+        // Verify password (implement your password verification)
+        const isValid = await verifyPassword(credentials.password, user.password);
+        if (!isValid) return null;
+
+        return { id: user.id, name: user.name, email: user.email };
+      },
+    }),
+  ],
+
+  callbacks: {
+    async signIn({ user, account, profile }) {
+      // For OAuth providers, create user in Keystone if doesn't exist
+      if (account?.provider !== 'credentials') {
+        const existing = await keystoneContext.sudo().query.User.findOne({
+          where: { email: user.email! },
+          query: 'id',
+        });
+
+        if (!existing) {
+          await keystoneContext.sudo().query.User.createOne({
+            data: {
+              name: user.name!,
+              email: user.email!,
+              // Set default role, etc.
+            },
+          });
+        }
+      }
+      return true;
+    },
+
+    async session({ session, token }) {
+      // **CRITICAL**: Fetch full user data from Keystone
+      const user = await keystoneContext.sudo().query.User.findOne({
+        where: { email: session.user?.email! },
+        query: 'id name email role allowAdminUI',
+      });
+
+      if (user) {
+        session.user.id = user.id;
+        session.user.role = user.role;
+        session.allowAdminUI = user.allowAdminUI || false;
+      }
+
+      return session;
+    },
+  },
+
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
+});
+\`\`\`
+
+**Key Patterns**:
+- ✅ Use \`keystoneContext.sudo()\` for auth queries (bypasses access control)
+- ✅ Sync NextAuth users with Keystone User list
+- ✅ Store user roles and permissions in Keystone
+- ✅ Extend session with Keystone user data
+- ✅ Support both OAuth and credentials providers`;
+  }
+
+  private getAPIRouteSetup(): string {
+    return `## 🌐 GraphQL API Route Setup
+
+**Location**: \`src/app/api/graphql/route.ts\`
+
+\`\`\`typescript
+import { createYoga } from 'graphql-yoga';
+import { keystoneContext } from '@/keystone/context';
+import { auth } from '@/lib/auth';
+
+const { handleRequest } = createYoga({
+  schema: keystoneContext.graphql.schema,
+  graphqlEndpoint: '/api/graphql',
+  fetchAPI: { Response },
+  context: async (req) => {
+    // **CRITICAL**: Get NextAuth session
+    const session = await auth();
+
+    // Return Keystone context with session
+    return keystoneContext.withRequest(req, {
+      session: session ? {
+        itemId: session.user.id,
+        data: session.user,
+        allowAdminUI: session.allowAdminUI,
+      } : undefined,
+    });
+  },
+});
+
+// Protected GraphQL endpoint (requires auth)
+export async function GET(req: Request) {
+  const session = await auth();
+  if (!session?.allowAdminUI) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  return handleRequest(req, {});
+}
+
+export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.allowAdminUI) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  return handleRequest(req, {});
+}
+
+export async function OPTIONS(req: Request) {
+  return handleRequest(req, {});
+}
+\`\`\`
+
+**Critical Points**:
+- ✅ Use GraphQL Yoga (not Apollo Server)
+- ✅ Integrate NextAuth session with Keystone context
+- ✅ Protect GraphQL endpoint with auth middleware
+- ✅ Use \`keystoneContext.withRequest()\` to pass session`;
+  }
+
+  private getCriticalPatterns(requiresAuth: boolean): string[] {
+    const patterns = [
+      '❌ **NEVER** run Keystone as a separate server - use getContext() only',
+      '✅ **ALWAYS** use \`keystoneContext.graphql.run()\` for GraphQL queries in server actions',
+      '✅ **ALWAYS** use \`keystoneContext.sudo()\` for auth-related queries (bypasses access control)',
+      '✅ **ALWAYS** use Next.js Server Actions for mutations (NOT custom GraphQL resolvers)',
+      '✅ **ALWAYS** validate with Zod schemas before calling Keystone mutations',
+      '✅ **ALWAYS** use \`ResultOf<typeof QUERY>\` for GraphQL type inference (never \`any\`)',
+      '✅ **ALWAYS** use Neon serverless adapter for Vercel deployment',
+      '✅ **ALWAYS** define lists in separate files under \`src/keystone/lists/\`',
+      '✅ **ALWAYS** export all lists from \`src/keystone/schema.ts\`',
+    ];
+
+    if (requiresAuth) {
+      patterns.push(
+        '✅ **ALWAYS** sync NextAuth users with Keystone User list',
+        '✅ **ALWAYS** extend NextAuth session with Keystone user data',
+        '✅ **ALWAYS** use \`auth()\` from NextAuth to get session in API routes',
+      );
+    }
+
+    return patterns;
   }
 
   private generateSchemaGuidance(spec: ParsedSpecification): SchemaGuidance[] {
