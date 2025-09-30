@@ -1,7 +1,15 @@
-import { QuestionResponse } from "./types";
+import { QuestionResponse, Question } from "./types";
 
 export interface LLMQuestionerConfig {
   maxFollowUpQuestions?: number;
+}
+
+export interface InferredAnswer {
+  questionId: string;
+  questionText: string;
+  inferredValue: string | boolean | string[];
+  confidence: number; // 0.0 to 1.0
+  reasoning: string;
 }
 
 // Export types from schemas
@@ -207,5 +215,60 @@ Provide your assessment including:
 - Areas for improvement or weaknesses
 - Specific recommendations for enhancement
 - Whether it's ready for development or needs more work`;
+  }
+
+  public generateAnswerInferencePrompt({
+    featureTitle,
+    featureDescription,
+    responses,
+    nextQuestion,
+  }: {
+    featureTitle: string;
+    featureDescription: string;
+    responses: QuestionResponse[];
+    nextQuestion: Question;
+  }): string {
+    const contextPrompt = this.buildContextPrompt(
+      featureTitle,
+      featureDescription,
+      responses,
+    );
+
+    let questionDetails = `Next Question ID: ${nextQuestion.id}
+Question Text: ${nextQuestion.text}
+Question Type: ${nextQuestion.type}
+Required: ${nextQuestion.required}`;
+
+    if (nextQuestion.options) {
+      questionDetails += `\nValid Options: ${nextQuestion.options.join(", ")}`;
+    }
+
+    return `${contextPrompt}
+
+${questionDetails}
+
+Your task: Analyze whether you can confidently infer the answer to this question based on:
+1. The feature title and description
+2. The user's previous responses
+3. Logical dependencies and implications
+
+CRITICAL RULES:
+- Only suggest an answer if you are 90%+ confident it's correct
+- Consider the question type and valid options (if applicable)
+- Do NOT make assumptions - only infer from explicit information
+- For boolean questions, only suggest if the answer is clearly implied
+- For select/multiselect, only suggest from the valid options provided
+- Explain your reasoning clearly
+
+If you CAN infer an answer with high confidence, respond with:
+CONFIDENCE: [0.0-1.0 score]
+INFERRED_ANSWER: [the answer value]
+REASONING: [clear explanation of why this inference is justified]
+
+If you CANNOT confidently infer the answer, respond with:
+CONFIDENCE: 0.0
+REASONING: [explain why the answer requires user input]
+
+Remember: It's better to ask the user than to make incorrect assumptions. Only infer when truly certain.`;
   }
 }

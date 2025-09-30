@@ -114,6 +114,7 @@ export class SpecCraftMCPServer {
     const currentQuestion = engine.getCurrentQuestion();
     const progress = engine.getProgress();
     const progressBar = this.generateProgressBar(progress.current, progress.total);
+    const overview = this.generateQuestionnaireOverview(engine);
 
     return {
       content: [
@@ -125,21 +126,26 @@ export class SpecCraftMCPServer {
 **Description**: ${description}
 **Progress**: ${progressBar} ${progress.current}/${progress.total} questions
 
+${overview}
+
 ---
 
 ## 🤖 **CLAUDE CODE: INTERACTIVE MODE**
 
 I've started a specification session for "${title}". Now continue the conversation naturally with the user - no slash commands needed!
 
+**Show the overview above to the user**, then start with the first question.
+
 **First Question** (${currentQuestion?.category}):
 ${currentQuestion?.text}
 
 **Instructions for Claude Code**:
-1. **Ask this question naturally** in your response to the user
-2. **Wait for their answer** in regular conversation
-3. **When they respond**, call \`spec_answer\` with session ID "${session.id}" and their response
-4. **Continue asking** the next questions returned by the system
-5. **Keep it conversational** - no need to mention session IDs or commands to the user
+1. **Present the questionnaire overview** to give the user context about what's coming
+2. **Ask the first question naturally** in your response to the user
+3. **Wait for their answer** in regular conversation
+4. **When they respond**, call \`spec_answer\` with session ID "${session.id}" and their response
+5. **Continue asking** the next questions returned by the system
+6. **Keep it conversational** - no need to mention session IDs or commands to the user
 
 **Remember**: Handle this as a natural conversation. The user doesn't need to know about the underlying session management.`,
         },
@@ -213,6 +219,58 @@ To answer this question, use:
     return bar;
   }
 
+  private groupQuestionsByCategory(engine: QuestionnaireEngine): Record<string, { count: number; required: number; order: number }> {
+    const questions = engine.getAvailableQuestions();
+    const groups: Record<string, { count: number; required: number; order: number }> = {};
+
+    for (const question of questions) {
+      if (!groups[question.category]) {
+        groups[question.category] = { count: 0, required: 0, order: question.order };
+      }
+      groups[question.category].count++;
+      if (question.required) {
+        groups[question.category].required++;
+      }
+    }
+
+    return groups;
+  }
+
+  private getCategoryDisplayInfo(category: string): { icon: string; name: string } {
+    const categoryMap: Record<string, { icon: string; name: string }> = {
+      'overview': { icon: '📌', name: 'Feature Overview' },
+      'functional': { icon: '⚙️', name: 'Functional Requirements' },
+      'ui_ux': { icon: '🎨', name: 'UI/UX Design' },
+      'security': { icon: '🔒', name: 'Security & Access' },
+      'performance': { icon: '⚡', name: 'Performance & Scalability' },
+      'technical': { icon: '🔧', name: 'Technical Details & Edge Cases' },
+    };
+
+    return categoryMap[category] || { icon: '📋', name: category };
+  }
+
+  private generateQuestionnaireOverview(engine: QuestionnaireEngine): string {
+    const categoryGroups = this.groupQuestionsByCategory(engine);
+    const totalQuestions = engine.getAvailableQuestions().length;
+
+    // Sort categories by their order
+    const sortedCategories = Object.entries(categoryGroups)
+      .sort(([, a], [, b]) => a.order - b.order);
+
+    let overview = `📋 **What We'll Cover** (${totalQuestions} questions, ~10-15 minutes):\n\n`;
+
+    for (const [category, info] of sortedCategories) {
+      const { icon, name } = this.getCategoryDisplayInfo(category);
+      let line = `${icon} **${name}** - ${info.count} question${info.count !== 1 ? 's' : ''}`;
+      if (info.required < info.count) {
+        line += ` (${info.required} required)`;
+      }
+      overview += `${line}\n`;
+    }
+
+    return overview;
+  }
+
   async answerQuestion({
     sessionId,
     answer,
@@ -242,6 +300,17 @@ To answer this question, use:
     const nextQuestion = engine.getCurrentQuestion();
     const progress = engine.getProgress();
     const isComplete = engine.isComplete();
+
+    // Check if we can infer the next answer (if not complete and after 3+ responses)
+    let inferencePrompt = '';
+    if (!isComplete && nextQuestion && session.responses.length >= 3) {
+      inferencePrompt = this.llmQuestioner.generateAnswerInferencePrompt({
+        featureTitle: session.featureTitle,
+        featureDescription: session.featureDescription,
+        responses: session.responses,
+        nextQuestion,
+      });
+    }
 
     if (isComplete) {
       const progressBar = this.generateProgressBar(progress.current, progress.total);
@@ -274,11 +343,8 @@ Perfect! I have all the information needed to create a comprehensive specificati
     }
 
     const progressBar = this.generateProgressBar(progress.current, progress.total);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `✅ **Question Answered**
+
+    let responseText = `✅ **Question Answered**
 
 **Progress**: ${progressBar} ${progress.current}/${progress.total} questions (${progress.percentage}%)
 
@@ -289,15 +355,48 @@ Perfect! I have all the information needed to create a comprehensive specificati
 Great! Continue the conversation naturally with the user.
 
 **Next Question** (${nextQuestion?.category}):
-${nextQuestion?.text}
+${nextQuestion?.text}`;
+
+    // Add inference analysis if available
+    if (inferencePrompt) {
+      responseText += `
+
+---
+
+## 🔮 **SMART INFERENCE CHECK**
+
+Before asking this question, analyze if you can confidently infer the answer from the context.
+
+${inferencePrompt}
+
+**Instructions**:
+1. **Analyze the inference prompt above** - can you confidently determine the answer?
+2. **If CONFIDENCE >= 0.9**: Present your suggested answer to the user with reasoning, ask them to confirm
+   - Example: "💡 Based on your previous answers, I believe this should be [answer] because [reasoning]. Is that correct?"
+3. **If CONFIDENCE < 0.9**: Ask the question normally without mentioning inference
+4. **If user confirms inference**: Call \`spec_answer\` with the inferred value
+5. **If user rejects or provides different answer**: Call \`spec_answer\` with their correction
+
+---`;
+    }
+
+    responseText += `
 
 **Instructions for Claude Code**:
-1. **Ask this question naturally** in your response to the user
-2. **Wait for their answer** in regular conversation
-3. **When they respond**, call \`spec_answer\` with session ID "${sessionId}" and their response
-4. **Keep it conversational** - no need to mention session management
+1. **Check inference first** (if provided above) - can you suggest an answer?
+2. **If high confidence inference**: Present it as a suggestion with reasoning
+3. **If no inference**: Ask the question naturally
+4. **Wait for their answer** (or confirmation) in regular conversation
+5. **When they respond**, call \`spec_answer\` with session ID "${sessionId}" and their response
+6. **Keep it conversational** - make inference feel helpful, not presumptuous
 
-**Remember**: Keep the conversation flowing naturally!`,
+**Remember**: Keep the conversation flowing naturally! Inference should accelerate, not disrupt.`;
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: responseText,
         },
       ],
     };
