@@ -113,6 +113,7 @@ export class SpecCraftMCPServer {
 
     const currentQuestion = engine.getCurrentQuestion();
     const progress = engine.getProgress();
+    const progressBar = this.generateProgressBar(progress.current, progress.total);
 
     return {
       content: [
@@ -122,7 +123,7 @@ export class SpecCraftMCPServer {
 
 **Session ID**: \`${session.id}\`
 **Description**: ${description}
-**Progress**: ${progress.current}/${progress.total} questions
+**Progress**: ${progressBar} ${progress.current}/${progress.total} questions
 
 ---
 
@@ -155,6 +156,7 @@ ${currentQuestion?.text}
     const engine = QuestionnaireEngine.fromSession(session);
     const currentQuestion = engine.getCurrentQuestion();
     const progress = engine.getProgress();
+    const progressBar = this.generateProgressBar(progress.current, progress.total);
 
     if (engine.isComplete()) {
       return {
@@ -165,6 +167,7 @@ ${currentQuestion?.text}
 
 **Feature**: ${session.featureTitle}
 **Session ID**: \`${sessionId}\`
+**Progress**: ${progressBar} ${progress.current}/${progress.total} (100%)
 **Status**: Ready for specification generation
 
 All questions have been answered. Generate the specification with:
@@ -185,7 +188,7 @@ Or validate completeness with AI:
 
 **Feature**: ${session.featureTitle}
 **Session ID**: \`${sessionId}\`
-**Progress**: ${progress.current}/${progress.total} (${progress.percentage}%)
+**Progress**: ${progressBar} ${progress.current}/${progress.total} (${progress.percentage}%)
 
 ---
 
@@ -200,6 +203,14 @@ To answer this question, use:
         },
       ],
     };
+  }
+
+  private generateProgressBar(current: number, total: number): string {
+    const percentage = total > 0 ? current / total : 0;
+    const filledBlocks = Math.round(percentage * 12);
+    const emptyBlocks = 12 - filledBlocks;
+    const bar = '█'.repeat(filledBlocks) + '░'.repeat(emptyBlocks);
+    return bar;
   }
 
   async answerQuestion({
@@ -233,6 +244,7 @@ To answer this question, use:
     const isComplete = engine.isComplete();
 
     if (isComplete) {
+      const progressBar = this.generateProgressBar(progress.current, progress.total);
       return {
         content: [
           {
@@ -240,7 +252,7 @@ To answer this question, use:
             text: `🎉 **Specification Complete!**
 
 **Session**: ${sessionId}
-**Final Progress**: ${progress.current}/${progress.total} questions answered
+**Final Progress**: ${progressBar} ${progress.current}/${progress.total} questions answered
 
 ---
 
@@ -261,13 +273,14 @@ Perfect! I have all the information needed to create a comprehensive specificati
       };
     }
 
+    const progressBar = this.generateProgressBar(progress.current, progress.total);
     return {
       content: [
         {
           type: "text",
           text: `✅ **Question Answered**
 
-**Progress**: ${progress.current}/${progress.total} questions (${progress.percentage}%)
+**Progress**: ${progressBar} ${progress.current}/${progress.total} questions (${progress.percentage}%)
 
 ---
 
@@ -418,6 +431,7 @@ ${validationPrompt}
     const engine = QuestionnaireEngine.fromSession(session);
     const progress = engine.getProgress();
     const currentQuestion = engine.getCurrentQuestion();
+    const progressBar = this.generateProgressBar(progress.current, progress.total);
 
     const responsesSummary = session.responses
       .map(
@@ -438,7 +452,7 @@ ${validationPrompt}
 **Created**: ${new Date(session.createdAt).toLocaleString()}
 **Updated**: ${new Date(session.updatedAt).toLocaleString()}
 
-**Progress**: ${progress.current}/${progress.total} (${progress.percentage}%)
+**Progress**: ${progressBar} ${progress.current}/${progress.total} (${progress.percentage}%)
 **Status**: ${engine.isComplete() ? "✅ Complete" : "📝 In Progress"}
 
 ${currentQuestion ? `**Current Question**: ${currentQuestion.text}` : ""}
