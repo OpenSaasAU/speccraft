@@ -1,11 +1,4 @@
 import { QuestionResponse } from "./types";
-import {
-  type GeneratedQuestion,
-  type QuestionImprovementResponse,
-  type CompletenessAnalysis,
-  type SmartQuestionGeneration,
-  type SpecificationQuality,
-} from "./llm-schemas";
 
 export interface LLMQuestionerConfig {
   maxFollowUpQuestions?: number;
