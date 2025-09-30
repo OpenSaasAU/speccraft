@@ -1,5 +1,14 @@
 # @opensaas/speccraft
 
+## 0.0.4
+
+### Patch Changes
+
+- 142c444: Be more opinionated about keystone setup
+- 292f1c7: infer answers from previous questions if possible
+- e161a26: improve progress bar
+- db86093: add claude.md to init
+
 ## 0.0.3
 
 ### Patch Changes
