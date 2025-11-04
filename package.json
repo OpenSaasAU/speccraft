@@ -1,6 +1,6 @@
 {
   "name": "@opensaas/speccraft",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "AI-powered specification creation for Claude Code via MCP server and slash commands. Initialize projects with 'npx @opensaas/speccraft init <project-name>'",
   "keywords": [
     "claude-code",
