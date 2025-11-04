@@ -14,12 +14,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/opensaas/speccraft.git"
+    "url": "https://github.com/opensaasau/speccraft.git"
   },
   "bugs": {
-    "url": "https://github.com/opensaas/speccraft/issues"
+    "url": "https://github.com/opensaasau/speccraft/issues"
   },
-  "homepage": "https://github.com/opensaas/speccraft#readme",
+  "homepage": "https://github.com/opensaasau/speccraft#readme",
   "main": "dist/mcp-server/mcp-server/index.js",
   "bin": {
     "speccraft": "bin/speccraft.js"
