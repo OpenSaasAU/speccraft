@@ -1,5 +1,11 @@
 # @opensaas/speccraft
 
+## 0.0.5
+
+### Patch Changes
+
+- ff2dba0: update urls
+
 ## 0.0.4
 
 ### Patch Changes
