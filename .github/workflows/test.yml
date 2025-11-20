@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Test Codebase
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Use Latest Corepack
         run: |
